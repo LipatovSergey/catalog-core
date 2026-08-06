@@ -2,9 +2,9 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
-import { AppModule } from '../src/app.module';
-import { configureApp } from '../src/configure-app';
-import { InitialCatalogs1720000000000 } from '../src/migrations/1720000000000-InitialCatalogs';
+import { AppModule } from '../../src/app.module';
+import { configureApp } from '../../src/configure-app';
+import { InitialCatalogs1720000000000 } from '../../src/migrations/1720000000000-InitialCatalogs';
 
 process.env.DATABASE_HOST ??= 'localhost';
 process.env.DATABASE_PORT ??= '55433';

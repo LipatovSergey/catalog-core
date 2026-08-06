@@ -14,7 +14,8 @@
     "format": "prettier --write \"{src,test}/**/*.ts\" \"*.{json,md,yml}\"",
     "migration:run": "npm run build && typeorm -d dist/database/data-source.js migration:run",
     "migration:revert": "npm run build && typeorm -d dist/database/data-source.js migration:revert",
-    "test": "npm run test:e2e",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "jest --config test/jest-unit.json",
     "test:e2e": "jest --config test/jest-e2e.json --runInBand"
   },
   "dependencies": {
