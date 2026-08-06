@@ -4,3 +4,4 @@ coverage/
 .env
 .env.test
 npm-debug.log*
+plans/
