@@ -1,11 +1,14 @@
 import {
-  ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { CatalogEntity } from './catalog.entity';
+import { type CatalogDocument } from './document-validation/catalog-document.schema';
+import { CatalogDocumentValidationError } from './document-validation/catalog-document-validation.error';
+import { parseCatalogDocument } from './document-validation/catalog-document.parser';
 
 @Injectable()
 export class CatalogsService {
@@ -14,21 +17,26 @@ export class CatalogsService {
     private readonly catalogs: Repository<CatalogEntity>,
   ) {}
 
-  async create(slug: string): Promise<CatalogEntity> {
-    try {
-      return await this.catalogs.save(this.catalogs.create({ slug, document: {} }));
-    } catch (error: unknown) {
-      if (
-        error instanceof QueryFailedError &&
-        (error.driverError as { code?: string }).code === '23505'
-      ) {
-        throw new ConflictException('Catalog slug is already in use');
-      }
-      throw error;
-    }
+  create(document: CatalogDocument): Promise<CatalogEntity> {
+    return this.catalogs.save(this.catalogs.create({ document }));
   }
 
   async findById(id: string): Promise<CatalogEntity> {
+    const catalog = await this.findEntityById(id);
+    catalog.document = this.parseStoredDocument(catalog.document);
+    return catalog;
+  }
+
+  async replaceDocument(
+    id: string,
+    document: CatalogDocument,
+  ): Promise<CatalogEntity> {
+    const catalog = await this.findEntityById(id);
+    catalog.document = document;
+    return this.catalogs.save(catalog);
+  }
+
+  private async findEntityById(id: string): Promise<CatalogEntity> {
     const catalog = await this.catalogs.findOneBy({ id });
     if (!catalog) {
       throw new NotFoundException('Catalog not found');
@@ -36,17 +44,17 @@ export class CatalogsService {
     return catalog;
   }
 
-  async findBySlug(slug: string): Promise<CatalogEntity> {
-    const catalog = await this.catalogs.findOneBy({ slug });
-    if (!catalog) {
-      throw new NotFoundException('Catalog not found');
+  private parseStoredDocument(value: unknown): CatalogDocument {
+    try {
+      return parseCatalogDocument(value);
+    } catch (error: unknown) {
+      if (error instanceof CatalogDocumentValidationError) {
+        throw new InternalServerErrorException({
+          code: 'INVALID_STORED_CATALOG_DOCUMENT',
+          message: 'Stored catalog document is invalid',
+        });
+      }
+      throw error;
     }
-    return catalog;
-  }
-
-  async replaceDocument(id: string, document: object): Promise<CatalogEntity> {
-    const catalog = await this.findById(id);
-    catalog.document = document;
-    return this.catalogs.save(catalog);
   }
 }

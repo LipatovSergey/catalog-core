@@ -9,16 +9,18 @@ import {
 } from '@nestjs/common';
 import { CatalogEntity } from './catalog.entity';
 import { CatalogsService } from './catalogs.service';
-import { CreateCatalogDto } from './dto/create-catalog.dto';
-import { JsonObjectPipe } from './json-object.pipe';
+import { CatalogDocumentPipe } from './document-validation/catalog-document.pipe';
+import { type CatalogDocument } from './document-validation/catalog-document.schema';
 
 @Controller('catalogs')
 export class CatalogsController {
   constructor(private readonly catalogsService: CatalogsService) {}
 
   @Post()
-  create(@Body() dto: CreateCatalogDto): Promise<CatalogEntity> {
-    return this.catalogsService.create(dto.slug);
+  create(
+    @Body(CatalogDocumentPipe) document: CatalogDocument,
+  ): Promise<CatalogEntity> {
+    return this.catalogsService.create(document);
   }
 
   @Get(':catalogId')
@@ -31,7 +33,7 @@ export class CatalogsController {
   @Put(':catalogId/document')
   replaceDocument(
     @Param('catalogId', new ParseUUIDPipe()) catalogId: string,
-    @Body(JsonObjectPipe) document: object,
+    @Body(CatalogDocumentPipe) document: CatalogDocument,
   ): Promise<CatalogEntity> {
     return this.catalogsService.replaceDocument(catalogId, document);
   }

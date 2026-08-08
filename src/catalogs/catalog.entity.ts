@@ -11,10 +11,7 @@ export class CatalogEntity {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ type: 'varchar', unique: true })
-  slug!: string;
-
-  @Column({ type: 'jsonb', default: () => "'{}'::jsonb" })
+  @Column({ type: 'jsonb' })
   document!: unknown;
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamp' })

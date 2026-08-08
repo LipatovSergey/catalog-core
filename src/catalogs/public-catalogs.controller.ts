@@ -1,4 +1,4 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, ParseUUIDPipe } from '@nestjs/common';
 import { CatalogEntity } from './catalog.entity';
 import { CatalogsService } from './catalogs.service';
 
@@ -6,8 +6,10 @@ import { CatalogsService } from './catalogs.service';
 export class PublicCatalogsController {
   constructor(private readonly catalogsService: CatalogsService) {}
 
-  @Get(':slug')
-  findBySlug(@Param('slug') slug: string): Promise<CatalogEntity> {
-    return this.catalogsService.findBySlug(slug);
+  @Get(':catalogId')
+  findById(
+    @Param('catalogId', new ParseUUIDPipe()) catalogId: string,
+  ): Promise<CatalogEntity> {
+    return this.catalogsService.findById(catalogId);
   }
 }

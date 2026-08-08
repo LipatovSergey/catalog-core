@@ -6,10 +6,14 @@ import { validateEnvironment } from './config/environment';
 import { createTypeOrmOptions } from './database/typeorm-options';
 import { HealthModule } from './health/health.module';
 
+const environment = process.env.NODE_ENV ?? 'development';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: `.env.${environment}`,
+      ignoreEnvFile: environment === 'production',
       validate: validateEnvironment,
     }),
     TypeOrmModule.forRootAsync({

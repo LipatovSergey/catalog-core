@@ -27,6 +27,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
           : 500;
     const details =
       exception instanceof HttpException ? exception.getResponse() : undefined;
+    const detailObject =
+      typeof details === 'object' && details !== null ? details : undefined;
     const message =
       typeof details === 'string'
         ? details
@@ -41,11 +43,19 @@ export class HttpExceptionFilter implements ExceptionFilter {
                 : status === 500
                   ? 'Internal server error'
                   : 'Request failed';
+    const code =
+      typeof (detailObject as { code?: unknown })?.code === 'string'
+        ? (detailObject as { code: string }).code
+        : (HttpStatus[status] ?? 'ERROR');
+    const errors = Array.isArray((detailObject as { errors?: unknown })?.errors)
+      ? (detailObject as { errors: unknown[] }).errors
+      : undefined;
 
     response.status(status).json({
       statusCode: status,
-      code: HttpStatus[status] ?? 'ERROR',
+      code,
       message,
+      ...(errors ? { errors } : {}),
       path: request.url,
     });
   }
