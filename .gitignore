@@ -6,3 +6,4 @@ coverage/
 .env.production
 npm-debug.log*
 plans/
+AGENTS.md
