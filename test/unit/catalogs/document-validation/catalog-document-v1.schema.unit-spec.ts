@@ -1,5 +1,5 @@
 import { Value } from '@sinclair/typebox/value';
-import { CatalogDocumentSchema } from '../../../../src/catalogs/document-validation/catalog-document.schema';
+import { CatalogDocumentV1Schema } from '../../../../src/catalogs/document-validation/catalog-document-v1.schema';
 import { registerCatalogFormats } from '../../../../src/catalogs/document-validation/catalog-formats';
 
 const validSectionId = 'd9428888-122b-4ff8-b234-cf471b0d1234';
@@ -28,7 +28,7 @@ function validSection(
   };
 }
 
-function validCatalogDocument(
+function validCatalogDocumentV1(
   overrides: Record<string, unknown> = {},
 ): Record<string, unknown> {
   return {
@@ -41,12 +41,12 @@ function validCatalogDocument(
 }
 
 function errorsFor(value: unknown) {
-  return [...Value.Errors(CatalogDocumentSchema, value)];
+  return [...Value.Errors(CatalogDocumentV1Schema, value)];
 }
 
 function errorsForSection(overrides: Record<string, unknown> = {}) {
   return errorsFor(
-    validCatalogDocument({ sections: [validSection(overrides)] }),
+    validCatalogDocumentV1({ sections: [validSection(overrides)] }),
   );
 }
 
@@ -54,20 +54,20 @@ function errorsForItem(overrides: Record<string, unknown> = {}) {
   return errorsForSection({ items: [validItem(overrides)] });
 }
 
-describe('CatalogDocumentSchema', () => {
+describe('CatalogDocumentV1Schema', () => {
   beforeAll(() => {
     registerCatalogFormats();
   });
 
   describe('catalog document', () => {
     it('accepts a minimal document', () => {
-      expect(errorsFor(validCatalogDocument())).toEqual([]);
+      expect(errorsFor(validCatalogDocumentV1())).toEqual([]);
     });
 
     it('accepts a complete document', () => {
       expect(
         errorsFor(
-          validCatalogDocument({
+          validCatalogDocumentV1({
             description: 'Seasonal selection',
             sections: [
               validSection({
@@ -83,7 +83,7 @@ describe('CatalogDocumentSchema', () => {
     it.each(['schemaVersion', 'title', 'currency', 'sections'])(
       'rejects a document without the required %s property',
       (property) => {
-        const document = validCatalogDocument();
+        const document = validCatalogDocumentV1();
         delete document[property];
 
         expect(errorsFor(document)).toEqual(
@@ -95,7 +95,7 @@ describe('CatalogDocumentSchema', () => {
     );
 
     it('rejects a schema version other than 1', () => {
-      expect(errorsFor(validCatalogDocument({ schemaVersion: 2 }))).toEqual(
+      expect(errorsFor(validCatalogDocumentV1({ schemaVersion: 2 }))).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: '/schemaVersion' }),
         ]),
@@ -105,7 +105,7 @@ describe('CatalogDocumentSchema', () => {
     it.each(['', 'x'.repeat(201)])(
       'rejects an invalid title length',
       (title) => {
-        expect(errorsFor(validCatalogDocument({ title }))).toEqual(
+        expect(errorsFor(validCatalogDocumentV1({ title }))).toEqual(
           expect.arrayContaining([expect.objectContaining({ path: '/title' })]),
         );
       },
@@ -114,7 +114,7 @@ describe('CatalogDocumentSchema', () => {
     it.each(['', 'x'.repeat(2_001)])(
       'rejects an invalid description length',
       (description) => {
-        expect(errorsFor(validCatalogDocument({ description }))).toEqual(
+        expect(errorsFor(validCatalogDocumentV1({ description }))).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ path: '/description' }),
           ]),
@@ -125,7 +125,7 @@ describe('CatalogDocumentSchema', () => {
     it.each(['eur', 'EU', 'EURO', 'E1R'])(
       'rejects the invalid currency code %s',
       (currency) => {
-        expect(errorsFor(validCatalogDocument({ currency }))).toEqual(
+        expect(errorsFor(validCatalogDocumentV1({ currency }))).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ path: '/currency' }),
           ]),
@@ -135,7 +135,7 @@ describe('CatalogDocumentSchema', () => {
 
     it('rejects sections that are not an array', () => {
       expect(
-        errorsFor(validCatalogDocument({ sections: 'not-an-array' })),
+        errorsFor(validCatalogDocumentV1({ sections: 'not-an-array' })),
       ).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: '/sections' }),
@@ -146,7 +146,9 @@ describe('CatalogDocumentSchema', () => {
     it('rejects more than 100 sections', () => {
       expect(
         errorsFor(
-          validCatalogDocument({ sections: Array(101).fill(validSection()) }),
+          validCatalogDocumentV1({
+            sections: Array(101).fill(validSection()),
+          }),
         ),
       ).toEqual(
         expect.arrayContaining([
@@ -156,7 +158,7 @@ describe('CatalogDocumentSchema', () => {
     });
 
     it('rejects unknown properties', () => {
-      expect(errorsFor(validCatalogDocument({ unknown: true }))).toEqual(
+      expect(errorsFor(validCatalogDocumentV1({ unknown: true }))).toEqual(
         expect.arrayContaining([expect.objectContaining({ path: '/unknown' })]),
       );
     });
@@ -170,7 +172,7 @@ describe('CatalogDocumentSchema', () => {
         delete section[property];
 
         expect(
-          errorsFor(validCatalogDocument({ sections: [section] })),
+          errorsFor(validCatalogDocumentV1({ sections: [section] })),
         ).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ path: `/sections/0/${property}` }),

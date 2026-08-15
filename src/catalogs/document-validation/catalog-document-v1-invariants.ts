@@ -1,4 +1,4 @@
-import { type CatalogDocument } from './catalog-document.schema';
+import { type CatalogDocumentV1 } from './catalog-document-v1.schema';
 import {
   CatalogDocumentValidationError,
   type CatalogDocumentValidationIssue,
@@ -19,8 +19,8 @@ function addWhitespaceIssue(
   }
 }
 
-export function validateCatalogDocumentInvariants(
-  document: CatalogDocument,
+export function validateCatalogDocumentV1Invariants(
+  document: CatalogDocumentV1,
 ): void {
   const errors: CatalogDocumentValidationIssue[] = [];
   const sectionIds = new Set<string>();

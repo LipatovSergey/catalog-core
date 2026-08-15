@@ -45,7 +45,7 @@ const SectionSchema: TObject<{
   { additionalProperties: false },
 );
 
-export const CatalogDocumentSchema: TObject<{
+export const CatalogDocumentV1Schema: TObject<{
   schemaVersion: TLiteral<1>;
   title: TString;
   description: TOptional<TString>;
@@ -62,4 +62,4 @@ export const CatalogDocumentSchema: TObject<{
   { additionalProperties: false },
 );
 
-export type CatalogDocument = Static<typeof CatalogDocumentSchema>;
+export type CatalogDocumentV1 = Static<typeof CatalogDocumentV1Schema>;

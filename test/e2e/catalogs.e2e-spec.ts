@@ -11,7 +11,7 @@ function uuid(index: number): string {
   return `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`;
 }
 
-function catalogDocument(title = 'Summer Menu') {
+function catalogDocumentV1(title = 'Summer Menu') {
   return {
     schemaVersion: 1,
     title,
@@ -20,7 +20,7 @@ function catalogDocument(title = 'Summer Menu') {
   };
 }
 
-function fullCatalogDocument() {
+function fullCatalogDocumentV1() {
   return {
     schemaVersion: 1,
     title: 'Summer Menu',
@@ -112,7 +112,7 @@ describe('Catalog Core (e2e)', () => {
   });
 
   it('creates, reads, replaces, and publicly exposes a catalog by UUID', async () => {
-    const initialDocument = fullCatalogDocument();
+    const initialDocument = fullCatalogDocumentV1();
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
       .send(initialDocument)
@@ -127,7 +127,7 @@ describe('Catalog Core (e2e)', () => {
       .expect(200)
       .expect(({ body }) => expect(body.document).toEqual(initialDocument));
 
-    const replacement = catalogDocument('Winter Menu');
+    const replacement = catalogDocumentV1('Winter Menu');
     await request(app.getHttpServer())
       .put(`/api/catalogs/${id}/document`)
       .send(replacement)
@@ -196,7 +196,7 @@ describe('Catalog Core (e2e)', () => {
     const repeatedSectionId = uuid(1);
     const repeatedItemId = uuid(2);
     const invalidDocument = {
-      ...catalogDocument('   '),
+      ...catalogDocumentV1('   '),
       sections: [
         {
           id: repeatedSectionId,
@@ -266,16 +266,16 @@ describe('Catalog Core (e2e)', () => {
   it('uses last-write-wins for sequential full replacements', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
-      .send(catalogDocument())
+      .send(catalogDocumentV1())
       .expect(201);
 
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocument('First replacement'))
+      .send(catalogDocumentV1('First replacement'))
       .expect(200);
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocument('Second replacement'))
+      .send(catalogDocumentV1('Second replacement'))
       .expect(200);
     await request(app.getHttpServer())
       .get(`/api/catalogs/${created.body.id}`)
@@ -286,7 +286,7 @@ describe('Catalog Core (e2e)', () => {
   });
 
   it('rejects an invalid replacement without changing the stored document', async () => {
-    const initialDocument = fullCatalogDocument();
+    const initialDocument = fullCatalogDocumentV1();
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
       .send(initialDocument)
@@ -294,7 +294,7 @@ describe('Catalog Core (e2e)', () => {
 
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocument('   '))
+      .send(catalogDocumentV1('   '))
       .expect(400)
       .expect(({ body }) => expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'));
 
@@ -307,7 +307,7 @@ describe('Catalog Core (e2e)', () => {
   it('does not expose an invalid document read from PostgreSQL', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
-      .send(catalogDocument())
+      .send(catalogDocumentV1())
       .expect(201);
 
     await database.query(
@@ -340,7 +340,7 @@ describe('Catalog Core (e2e)', () => {
 
   it('accepts a valid catalog document below the 256kb limit', async () => {
     const document = {
-      ...catalogDocument('Large catalog'),
+      ...catalogDocumentV1('Large catalog'),
       sections: Array.from({ length: 100 }, (_, index) => ({
         id: uuid(index + 1),
         title: `Section ${index + 1}`,

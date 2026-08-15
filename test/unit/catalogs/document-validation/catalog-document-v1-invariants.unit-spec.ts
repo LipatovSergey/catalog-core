@@ -1,8 +1,8 @@
-import { type CatalogDocument } from '../../../../src/catalogs/document-validation/catalog-document.schema';
-import { validateCatalogDocumentInvariants } from '../../../../src/catalogs/document-validation/catalog-document-invariants';
+import { validateCatalogDocumentV1Invariants } from '../../../../src/catalogs/document-validation/catalog-document-v1-invariants';
 import { CatalogDocumentValidationError } from '../../../../src/catalogs/document-validation/catalog-document-validation.error';
+import { type CatalogDocumentV1 } from '../../../../src/catalogs/document-validation/catalog-document-v1.schema';
 
-type Section = CatalogDocument['sections'][number];
+type Section = CatalogDocumentV1['sections'][number];
 type Item = Section['items'][number];
 
 function uuid(index: number): string {
@@ -31,9 +31,9 @@ function validSection(
   };
 }
 
-function validCatalogDocument(
-  overrides: Partial<CatalogDocument> = {},
-): CatalogDocument {
+function validCatalogDocumentV1(
+  overrides: Partial<CatalogDocumentV1> = {},
+): CatalogDocumentV1 {
   return {
     schemaVersion: 1,
     title: 'Summer Menu',
@@ -44,10 +44,10 @@ function validCatalogDocument(
 }
 
 function validationErrorFor(
-  document: CatalogDocument,
+  document: CatalogDocumentV1,
 ): CatalogDocumentValidationError {
   try {
-    validateCatalogDocumentInvariants(document);
+    validateCatalogDocumentV1Invariants(document);
   } catch (error: unknown) {
     if (error instanceof CatalogDocumentValidationError) {
       return error;
@@ -58,17 +58,17 @@ function validationErrorFor(
   throw new Error('Expected catalog document validation to fail');
 }
 
-function expectIssue(document: CatalogDocument, path: string): void {
+function expectIssue(document: CatalogDocumentV1, path: string): void {
   expect(validationErrorFor(document).errors).toEqual(
     expect.arrayContaining([expect.objectContaining({ path })]),
   );
 }
 
-describe('validateCatalogDocumentInvariants', () => {
+describe('validateCatalogDocumentV1Invariants', () => {
   it('accepts a document that satisfies all business invariants', () => {
     expect(() =>
-      validateCatalogDocumentInvariants(
-        validCatalogDocument({
+      validateCatalogDocumentV1Invariants(
+        validCatalogDocumentV1({
           description: 'Seasonal selection',
           sections: [
             validSection(uuid(1), {
@@ -86,15 +86,18 @@ describe('validateCatalogDocumentInvariants', () => {
   });
 
   it('rejects a whitespace-only catalog title', () => {
-    expectIssue(validCatalogDocument({ title: '   ' }), '/title');
+    expectIssue(validCatalogDocumentV1({ title: '   ' }), '/title');
   });
 
   it('rejects a whitespace-only catalog description', () => {
-    expectIssue(validCatalogDocument({ description: '\t\n' }), '/description');
+    expectIssue(
+      validCatalogDocumentV1({ description: '\t\n' }),
+      '/description',
+    );
   });
 
   it('rejects whitespace-only section strings', () => {
-    const document = validCatalogDocument({
+    const document = validCatalogDocumentV1({
       sections: [validSection(uuid(1), { title: ' ', description: '\t' })],
     });
 
@@ -107,7 +110,7 @@ describe('validateCatalogDocumentInvariants', () => {
   });
 
   it('rejects whitespace-only item strings', () => {
-    const document = validCatalogDocument({
+    const document = validCatalogDocumentV1({
       sections: [
         validSection(uuid(1), {
           items: [validItem(uuid(2), { name: ' ', description: '\n' })],
@@ -127,7 +130,7 @@ describe('validateCatalogDocumentInvariants', () => {
 
   it('rejects a duplicate section ID', () => {
     const repeatedId = uuid(1);
-    const document = validCatalogDocument({
+    const document = validCatalogDocumentV1({
       sections: [validSection(repeatedId), validSection(repeatedId)],
     });
 
@@ -136,7 +139,7 @@ describe('validateCatalogDocumentInvariants', () => {
 
   it('rejects a duplicate item ID across different sections', () => {
     const repeatedId = uuid(3);
-    const document = validCatalogDocument({
+    const document = validCatalogDocumentV1({
       sections: [
         validSection(uuid(1), { items: [validItem(repeatedId)] }),
         validSection(uuid(2), { items: [validItem(repeatedId)] }),
@@ -156,6 +159,6 @@ describe('validateCatalogDocumentInvariants', () => {
       }),
     );
 
-    expectIssue(validCatalogDocument({ sections }), '/sections');
+    expectIssue(validCatalogDocumentV1({ sections }), '/sections');
   });
 });

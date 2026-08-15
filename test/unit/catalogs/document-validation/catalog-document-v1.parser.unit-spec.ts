@@ -1,7 +1,7 @@
 import { CatalogDocumentValidationError } from '../../../../src/catalogs/document-validation/catalog-document-validation.error';
-import { parseCatalogDocument } from '../../../../src/catalogs/document-validation/catalog-document.parser';
+import { parseCatalogDocumentV1 } from '../../../../src/catalogs/document-validation/catalog-document-v1.parser';
 
-function validCatalogDocument(): Record<string, unknown> {
+function validCatalogDocumentV1(): Record<string, unknown> {
   return {
     schemaVersion: 1,
     title: 'Summer Menu',
@@ -10,16 +10,16 @@ function validCatalogDocument(): Record<string, unknown> {
   };
 }
 
-describe('parseCatalogDocument', () => {
+describe('parseCatalogDocumentV1', () => {
   it('returns a valid catalog document without changing it', () => {
-    const value = validCatalogDocument();
+    const value = validCatalogDocumentV1();
 
-    expect(parseCatalogDocument(value)).toBe(value);
+    expect(parseCatalogDocumentV1(value)).toBe(value);
   });
 
   it('uses the configured UUID format for nested identifiers', () => {
     const value = {
-      ...validCatalogDocument(),
+      ...validCatalogDocumentV1(),
       sections: [
         {
           id: 'not-a-uuid',
@@ -29,7 +29,7 @@ describe('parseCatalogDocument', () => {
       ],
     };
 
-    expect(() => parseCatalogDocument(value)).toThrow(
+    expect(() => parseCatalogDocumentV1(value)).toThrow(
       expect.objectContaining({
         errors: expect.arrayContaining([
           expect.objectContaining({ path: '/sections/0/id' }),
@@ -46,12 +46,12 @@ describe('parseCatalogDocument', () => {
       sections: [],
     };
 
-    expect(() => parseCatalogDocument(value)).toThrow(
+    expect(() => parseCatalogDocumentV1(value)).toThrow(
       CatalogDocumentValidationError,
     );
 
     try {
-      parseCatalogDocument(value);
+      parseCatalogDocumentV1(value);
     } catch (error: unknown) {
       expect(error).toMatchObject({
         message: 'Catalog document is invalid',
@@ -65,8 +65,8 @@ describe('parseCatalogDocument', () => {
 
   it('rejects a document that violates business invariants', () => {
     expect(() =>
-      parseCatalogDocument({
-        ...validCatalogDocument(),
+      parseCatalogDocumentV1({
+        ...validCatalogDocumentV1(),
         title: '   ',
       }),
     ).toThrow(

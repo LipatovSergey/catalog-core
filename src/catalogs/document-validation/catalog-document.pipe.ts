@@ -3,18 +3,18 @@ import {
   Injectable,
   type PipeTransform,
 } from '@nestjs/common';
-import { type CatalogDocument } from './catalog-document.schema';
+import { type CatalogDocumentV1 } from './catalog-document-v1.schema';
 import { CatalogDocumentValidationError } from './catalog-document-validation.error';
-import { parseCatalogDocument } from './catalog-document.parser';
+import { parseCatalogDocumentV1 } from './catalog-document-v1.parser';
 
 @Injectable()
 export class CatalogDocumentPipe implements PipeTransform<
   unknown,
-  CatalogDocument
+  CatalogDocumentV1
 > {
-  transform(value: unknown): CatalogDocument {
+  transform(value: unknown): CatalogDocumentV1 {
     try {
-      return parseCatalogDocument(value);
+      return parseCatalogDocumentV1(value);
     } catch (error: unknown) {
       if (error instanceof CatalogDocumentValidationError) {
         throw new BadRequestException({
