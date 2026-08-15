@@ -12,11 +12,7 @@ import {
 
 export const CatalogLocaleSchema: TUnion<
   [TLiteral<'cnr'>, TLiteral<'en'>, TLiteral<'ru'>]
-> = Type.Union([
-  Type.Literal('cnr'),
-  Type.Literal('en'),
-  Type.Literal('ru'),
-]);
+> = Type.Union([Type.Literal('cnr'), Type.Literal('en'), Type.Literal('ru')]);
 
 export type CatalogLocale = Static<typeof CatalogLocaleSchema>;
 
@@ -28,10 +24,7 @@ type TLocalizedTextSchema = TObject<{
 
 function localizedTextSchema(maxLength: number): TLocalizedTextSchema {
   return Type.Partial(
-    Type.Record(
-      CatalogLocaleSchema,
-      Type.String({ minLength: 1, maxLength }),
-    ),
+    Type.Record(CatalogLocaleSchema, Type.String({ minLength: 1, maxLength })),
     {
       minProperties: 1,
       maxProperties: 3,
@@ -58,7 +51,7 @@ const PriceVariantSchema: TObject<{
   { additionalProperties: false },
 );
 
-const ItemV2Schema: TObject<{
+export const ItemV2Schema: TObject<{
   id: TString;
   name: TLocalizedTextSchema;
   description: TOptional<TLocalizedTextSchema>;
