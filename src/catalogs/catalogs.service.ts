@@ -6,9 +6,9 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CatalogEntity } from './catalog.entity';
-import { type CatalogDocumentV1 } from './document-validation/catalog-document-v1.schema';
 import { CatalogDocumentValidationError } from './document-validation/catalog-document-validation.error';
-import { parseCatalogDocumentV1 } from './document-validation/catalog-document-v1.parser';
+import { type CatalogDocumentV2 } from './document-validation/catalog-document-v2.schema';
+import { parseCatalogDocumentV2 } from './document-validation/catalog-document-v2.parser';
 
 @Injectable()
 export class CatalogsService {
@@ -17,7 +17,7 @@ export class CatalogsService {
     private readonly catalogs: Repository<CatalogEntity>,
   ) {}
 
-  create(document: CatalogDocumentV1): Promise<CatalogEntity> {
+  create(document: CatalogDocumentV2): Promise<CatalogEntity> {
     return this.catalogs.save(this.catalogs.create({ document }));
   }
 
@@ -29,7 +29,7 @@ export class CatalogsService {
 
   async replaceDocument(
     id: string,
-    document: CatalogDocumentV1,
+    document: CatalogDocumentV2,
   ): Promise<CatalogEntity> {
     const catalog = await this.findEntityById(id);
     catalog.document = document;
@@ -44,9 +44,9 @@ export class CatalogsService {
     return catalog;
   }
 
-  private parseStoredDocument(value: unknown): CatalogDocumentV1 {
+  private parseStoredDocument(value: unknown): CatalogDocumentV2 {
     try {
-      return parseCatalogDocumentV1(value);
+      return parseCatalogDocumentV2(value);
     } catch (error: unknown) {
       if (error instanceof CatalogDocumentValidationError) {
         throw new InternalServerErrorException({

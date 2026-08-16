@@ -10,7 +10,7 @@ import {
 import { CatalogEntity } from './catalog.entity';
 import { CatalogsService } from './catalogs.service';
 import { CatalogDocumentPipe } from './document-validation/catalog-document.pipe';
-import { type CatalogDocumentV1 } from './document-validation/catalog-document-v1.schema';
+import { type CatalogDocumentV2 } from './document-validation/catalog-document-v2.schema';
 
 @Controller('catalogs')
 export class CatalogsController {
@@ -18,7 +18,7 @@ export class CatalogsController {
 
   @Post()
   create(
-    @Body(CatalogDocumentPipe) document: CatalogDocumentV1,
+    @Body(CatalogDocumentPipe) document: CatalogDocumentV2,
   ): Promise<CatalogEntity> {
     return this.catalogsService.create(document);
   }
@@ -33,7 +33,7 @@ export class CatalogsController {
   @Put(':catalogId/document')
   replaceDocument(
     @Param('catalogId', new ParseUUIDPipe()) catalogId: string,
-    @Body(CatalogDocumentPipe) document: CatalogDocumentV1,
+    @Body(CatalogDocumentPipe) document: CatalogDocumentV2,
   ): Promise<CatalogEntity> {
     return this.catalogsService.replaceDocument(catalogId, document);
   }

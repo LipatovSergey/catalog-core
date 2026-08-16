@@ -11,50 +11,57 @@ function uuid(index: number): string {
   return `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`;
 }
 
-function catalogDocumentV1(title = 'Summer Menu') {
+function catalogDocumentV2(title = 'Summer Menu') {
   return {
-    schemaVersion: 1,
-    title,
+    schemaVersion: 2,
+    defaultLocale: 'en',
+    supportedLocales: ['en'],
+    title: { en: title },
     currency: 'EUR',
     sections: [],
   };
 }
 
-function fullCatalogDocumentV1() {
+function fullCatalogDocumentV2() {
   return {
-    schemaVersion: 1,
-    title: 'Summer Menu',
-    description: 'Seasonal selection',
+    schemaVersion: 2,
+    defaultLocale: 'en',
+    supportedLocales: ['en', 'ru'],
+    title: { en: 'Summer Menu', ru: 'Летнее меню' },
+    description: { en: 'Seasonal selection' },
     currency: 'EUR',
     sections: [
       {
         id: uuid(1),
-        title: 'Drinks',
+        title: { en: 'Drinks', ru: 'Напитки' },
         items: [
           {
             id: uuid(2),
-            name: 'Coffee',
-            description: 'Freshly brewed coffee',
-            price: '12',
+            name: { en: 'Coffee', ru: 'Кофе' },
+            description: { en: 'Freshly brewed coffee' },
+            priceVariants: [
+              { label: { en: 'Small', ru: 'Маленький' }, price: '8' },
+              { label: { en: 'Large', ru: 'Большой' }, price: '12' },
+            ],
             available: true,
           },
           {
             id: uuid(3),
-            name: 'Tea',
-            price: '8.5',
+            name: { en: 'Tea' },
+            priceVariants: [{ price: '8.5' }],
             available: true,
           },
         ],
       },
       {
         id: uuid(4),
-        title: 'Desserts',
-        description: 'Made daily',
+        title: { en: 'Desserts' },
+        description: { en: 'Made daily', ru: 'Готовятся ежедневно' },
         items: [
           {
             id: uuid(5),
-            name: 'Cake',
-            price: '9.50',
+            name: { en: 'Cake', ru: 'Торт' },
+            priceVariants: [{ price: '9.50' }],
             available: false,
           },
         ],
@@ -112,7 +119,7 @@ describe('Catalog Core (e2e)', () => {
   });
 
   it('creates, reads, replaces, and publicly exposes a catalog by UUID', async () => {
-    const initialDocument = fullCatalogDocumentV1();
+    const initialDocument = fullCatalogDocumentV2();
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
       .send(initialDocument)
@@ -127,7 +134,7 @@ describe('Catalog Core (e2e)', () => {
       .expect(200)
       .expect(({ body }) => expect(body.document).toEqual(initialDocument));
 
-    const replacement = catalogDocumentV1('Winter Menu');
+    const replacement = catalogDocumentV2('Winter Menu');
     await request(app.getHttpServer())
       .put(`/api/catalogs/${id}/document`)
       .send(replacement)
@@ -140,21 +147,53 @@ describe('Catalog Core (e2e)', () => {
       .expect(({ body }) => expect(body.document).toEqual(replacement));
   });
 
+  it('rejects v1 documents on create and replacement', async () => {
+    const documentV1 = {
+      schemaVersion: 1,
+      title: 'Legacy Menu',
+      currency: 'EUR',
+      sections: [],
+    };
+
+    await request(app.getHttpServer())
+      .post('/api/catalogs')
+      .send(documentV1)
+      .expect(400)
+      .expect(({ body }) =>
+        expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'),
+      );
+
+    const created = await request(app.getHttpServer())
+      .post('/api/catalogs')
+      .send(catalogDocumentV2())
+      .expect(201);
+
+    await request(app.getHttpServer())
+      .put(`/api/catalogs/${created.body.id}/document`)
+      .send(documentV1)
+      .expect(400)
+      .expect(({ body }) =>
+        expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'),
+      );
+  });
+
   it('returns useful paths for structural validation errors', async () => {
     const invalidDocument = {
-      schemaVersion: 1,
-      title: 'Summer Menu',
+      schemaVersion: 2,
+      defaultLocale: 'en',
+      supportedLocales: ['en'],
+      title: { en: 'Summer Menu' },
       currency: 'EUR',
       sections: [
         {
           id: 'not-a-uuid',
-          title: 'Drinks',
+          title: { en: 'Drinks' },
           unknownSectionField: true,
           items: [
             {
               id: uuid(2),
-              name: 'Coffee',
-              price: 12.5,
+              name: { en: 'Coffee' },
+              priceVariants: [{ price: 12.5 }],
               available: 'true',
               unknownItemField: true,
             },
@@ -179,7 +218,7 @@ describe('Catalog Core (e2e)', () => {
               path: '/sections/0/unknownSectionField',
             }),
             expect.objectContaining({
-              path: '/sections/0/items/0/price',
+              path: '/sections/0/items/0/priceVariants/0/price',
             }),
             expect.objectContaining({
               path: '/sections/0/items/0/available',
@@ -196,28 +235,28 @@ describe('Catalog Core (e2e)', () => {
     const repeatedSectionId = uuid(1);
     const repeatedItemId = uuid(2);
     const invalidDocument = {
-      ...catalogDocumentV1('   '),
+      ...catalogDocumentV2('   '),
       sections: [
         {
           id: repeatedSectionId,
-          title: 'First section',
+          title: { en: 'First section' },
           items: [
             {
               id: repeatedItemId,
-              name: 'First item',
-              price: '10',
+              name: { en: 'First item' },
+              priceVariants: [{ price: '10' }],
               available: true,
             },
           ],
         },
         {
           id: repeatedSectionId,
-          title: 'Second section',
+          title: { en: 'Second section' },
           items: [
             {
               id: repeatedItemId,
-              name: 'Second item',
-              price: '20',
+              name: { en: 'Second item' },
+              priceVariants: [{ price: '20' }],
               available: true,
             },
           ],
@@ -233,7 +272,7 @@ describe('Catalog Core (e2e)', () => {
         expect(body.code).toBe('INVALID_CATALOG_DOCUMENT');
         expect(body.errors).toEqual(
           expect.arrayContaining([
-            expect.objectContaining({ path: '/title' }),
+            expect.objectContaining({ path: '/title/en' }),
             expect.objectContaining({ path: '/sections/1/id' }),
             expect.objectContaining({ path: '/sections/1/items/0/id' }),
           ]),
@@ -266,27 +305,27 @@ describe('Catalog Core (e2e)', () => {
   it('uses last-write-wins for sequential full replacements', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
-      .send(catalogDocumentV1())
+      .send(catalogDocumentV2())
       .expect(201);
 
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocumentV1('First replacement'))
+      .send(catalogDocumentV2('First replacement'))
       .expect(200);
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocumentV1('Second replacement'))
+      .send(catalogDocumentV2('Second replacement'))
       .expect(200);
     await request(app.getHttpServer())
       .get(`/api/catalogs/${created.body.id}`)
       .expect(200)
       .expect(({ body }) =>
-        expect(body.document.title).toBe('Second replacement'),
+        expect(body.document.title.en).toBe('Second replacement'),
       );
   });
 
   it('rejects an invalid replacement without changing the stored document', async () => {
-    const initialDocument = fullCatalogDocumentV1();
+    const initialDocument = fullCatalogDocumentV2();
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
       .send(initialDocument)
@@ -294,7 +333,7 @@ describe('Catalog Core (e2e)', () => {
 
     await request(app.getHttpServer())
       .put(`/api/catalogs/${created.body.id}/document`)
-      .send(catalogDocumentV1('   '))
+      .send(catalogDocumentV2('   '))
       .expect(400)
       .expect(({ body }) => expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'));
 
@@ -307,7 +346,7 @@ describe('Catalog Core (e2e)', () => {
   it('does not expose an invalid document read from PostgreSQL', async () => {
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
-      .send(catalogDocumentV1())
+      .send(catalogDocumentV2())
       .expect(201);
 
     await database.query(
@@ -340,11 +379,11 @@ describe('Catalog Core (e2e)', () => {
 
   it('accepts a valid catalog document below the 256kb limit', async () => {
     const document = {
-      ...catalogDocumentV1('Large catalog'),
+      ...catalogDocumentV2('Large catalog'),
       sections: Array.from({ length: 100 }, (_, index) => ({
         id: uuid(index + 1),
-        title: `Section ${index + 1}`,
-        description: 'x'.repeat(1_900),
+        title: { en: `Section ${index + 1}` },
+        description: { en: 'x'.repeat(1_900) },
         items: [],
       })),
     };
