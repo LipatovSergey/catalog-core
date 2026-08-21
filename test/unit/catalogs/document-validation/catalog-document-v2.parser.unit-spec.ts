@@ -13,6 +13,9 @@ function validCatalogDocument(): Record<string, unknown> {
 }
 
 describe('parseCatalogDocumentV2', () => {
+  const validImageKey =
+    '550e8400-e29b-41d4-a716-446655440000.webp';
+
   it('returns a valid catalog document without changing it', () => {
     const value = validCatalogDocument();
 
@@ -74,6 +77,60 @@ describe('parseCatalogDocumentV2', () => {
       expect.objectContaining({
         errors: expect.arrayContaining([
           expect.objectContaining({ path: '/title/en' }),
+        ]),
+      }),
+    );
+  });
+
+  it('accepts an optional logical imageKey on an item', () => {
+    const value = {
+      ...validCatalogDocument(),
+      sections: [
+        {
+          id: 'd9428888-122b-4ff8-b234-cf471b0d1234',
+          title: { en: 'Drinks' },
+          items: [
+            {
+              id: '7b42981d-2928-4b24-93a1-84ca9b954342',
+              name: { en: 'Coffee' },
+              imageKey: validImageKey,
+              priceVariants: [{ price: '12.50' }],
+              available: true,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(parseCatalogDocumentV2(value)).toBe(value);
+  });
+
+  it('rejects a physical image path on an item', () => {
+    expect(() =>
+      parseCatalogDocumentV2({
+        ...validCatalogDocument(),
+        sections: [
+          {
+            id: 'd9428888-122b-4ff8-b234-cf471b0d1234',
+            title: { en: 'Drinks' },
+            items: [
+              {
+                id: '7b42981d-2928-4b24-93a1-84ca9b954342',
+                name: { en: 'Coffee' },
+                imageKey: '/var/catalog/images/coffee.webp',
+                priceVariants: [{ price: '12.50' }],
+                available: true,
+              },
+            ],
+          },
+        ],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        errors: expect.arrayContaining([
+          expect.objectContaining({
+            path: '/sections/0/items/0/imageKey',
+          }),
         ]),
       }),
     );

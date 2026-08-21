@@ -105,6 +105,7 @@ type CatalogDocumentV2 = {
       id: string;
       name: LocalizedText;
       description?: LocalizedText;
+      imageKey?: string;
       priceVariants: Array<{
         label?: LocalizedText;
         price: string;
@@ -128,6 +129,8 @@ Structural constraints:
 - a catalog contains at most 100 sections;
 - a section contains at most 500 items;
 - an Item contains 1–20 ordered price variants;
+- optional `imageKey` is a server-generated UUID followed by `.jpg`, `.png`,
+  or `.webp`;
 - `price` is a non-negative decimal string with at most two fractional digits
   and at most ten integer digits;
 - `available` is an explicit boolean;
@@ -208,6 +211,7 @@ curl -X PUT http://localhost:3000/api/catalogs/CATALOG_ID/document \
           {
             "id": "7b42981d-2928-4b24-93a1-84ca9b954342",
             "name": { "en": "Example item", "ru": "Пример" },
+            "imageKey": "550e8400-e29b-41d4-a716-446655440000.webp",
             "priceVariants": [
               {
                 "label": { "en": "Regular", "ru": "Обычный" },
@@ -324,7 +328,8 @@ The multilingual v2 contract and data transition are documented in
 - Draft and published states are not separated.
 - Administrative and public APIs read the same immediately visible document.
 - There are no users or authorization.
-- Redis, AI integration, image handling, search, and events are absent.
+- Redis, AI integration, image upload and storage, search, and events are
+  absent.
 - Locale support is currently limited to `cnr`, `en`, and `ru`.
 - Legacy v1 code is retained only for the finite data conversion.
 

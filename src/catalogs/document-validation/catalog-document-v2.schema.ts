@@ -55,6 +55,7 @@ export const ItemV2Schema: TObject<{
   id: TString;
   name: TLocalizedTextSchema;
   description: TOptional<TLocalizedTextSchema>;
+  imageKey: TOptional<TString>;
   priceVariants: TArray<typeof PriceVariantSchema>;
   available: TBoolean;
 }> = Type.Object(
@@ -62,6 +63,12 @@ export const ItemV2Schema: TObject<{
     id: Type.String({ format: 'uuid' }),
     name: LocalizedShortTextSchema,
     description: Type.Optional(LocalizedDescriptionSchema),
+    imageKey: Type.Optional(
+      Type.String({
+        pattern:
+          '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(?:jpg|png|webp)$',
+      }),
+    ),
     priceVariants: Type.Array(PriceVariantSchema, {
       minItems: 1,
       maxItems: 20,

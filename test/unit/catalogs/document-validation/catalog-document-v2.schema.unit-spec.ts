@@ -367,6 +367,9 @@ describe('CatalogDocumentV2Schema', () => {
   });
 
   describe('item', () => {
+    const validImageKey =
+      '550e8400-e29b-41d4-a716-446655440000.webp';
+
     it.each(['id', 'name', 'priceVariants', 'available'])(
       'rejects an item without the required %s property',
       (property) => {
@@ -403,6 +406,27 @@ describe('CatalogDocumentV2Schema', () => {
       expect(errorsForItem({ available: 'true' })).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: '/sections/0/items/0/available' }),
+        ]),
+      );
+    });
+
+    it('accepts an item without an imageKey', () => {
+      expect(errorsForItem()).toEqual([]);
+    });
+
+    it('accepts a server-generated imageKey', () => {
+      expect(errorsForItem({ imageKey: validImageKey })).toEqual([]);
+    });
+
+    it.each([
+      'https://example.com/image.webp',
+      '/var/catalog/images/image.webp',
+      '../../image.webp',
+      '550e8400-e29b-41d4-a716-446655440000.svg',
+    ])('rejects the unsafe imageKey %s', (imageKey) => {
+      expect(errorsForItem({ imageKey })).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: '/sections/0/items/0/imageKey' }),
         ]),
       );
     });
