@@ -6,6 +6,7 @@ const requiredVariables = [
   'DATABASE_USER',
   'DATABASE_PASSWORD',
   'DATABASE_NAME',
+  'IMAGE_STORAGE_DIR',
 ] as const;
 
 export function validateEnvironment(
@@ -19,16 +20,17 @@ export function validateEnvironment(
   }
 
   const databasePort = Number(config.DATABASE_PORT);
-  if (!Number.isInteger(databasePort) || databasePort < 1 || databasePort > 65535) {
+  if (
+    !Number.isInteger(databasePort) ||
+    databasePort < 1 ||
+    databasePort > 65535
+  ) {
     throw new Error('DATABASE_PORT must be a valid TCP port');
   }
 
   return config;
 }
 
-export function getRequiredConfig(
-  config: ConfigService,
-  key: string,
-): string {
+export function getRequiredConfig(config: ConfigService, key: string): string {
   return config.getOrThrow<string>(key);
 }
