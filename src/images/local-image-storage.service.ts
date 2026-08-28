@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { isUUID } from 'class-validator';
 import { getRequiredConfig } from '../config/environment';
-
-const IMAGE_KEY_PATTERN =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.(?:jpg|png|webp)$/;
+import { IMAGE_KEY_REGEXP } from './image-key';
 
 @Injectable()
 export class LocalImageStorageService {
@@ -27,12 +25,17 @@ export class LocalImageStorageService {
     await writeFile(imagePath, content, { flag: 'wx' });
   }
 
+  read(catalogId: string, imageKey: string): Promise<Buffer> {
+    const imagePath = this.resolveImagePath(catalogId, imageKey);
+    return readFile(imagePath);
+  }
+
   private resolveImagePath(catalogId: string, imageKey: string): string {
     if (!isUUID(catalogId)) {
       throw new Error('Invalid catalog ID');
     }
 
-    if (!IMAGE_KEY_PATTERN.test(imageKey)) {
+    if (!IMAGE_KEY_REGEXP.test(imageKey)) {
       throw new Error('Invalid image key');
     }
 

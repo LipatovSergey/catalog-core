@@ -9,6 +9,7 @@ import {
   type TString,
   type TUnion,
 } from '@sinclair/typebox';
+import { IMAGE_KEY_PATTERN } from '../../images/image-key';
 
 export const CatalogLocaleSchema: TUnion<
   [TLiteral<'cnr'>, TLiteral<'en'>, TLiteral<'ru'>]
@@ -65,8 +66,7 @@ export const ItemV2Schema: TObject<{
     description: Type.Optional(LocalizedDescriptionSchema),
     imageKey: Type.Optional(
       Type.String({
-        pattern:
-          '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.(?:jpg|png|webp)$',
+        pattern: IMAGE_KEY_PATTERN,
       }),
     ),
     priceVariants: Type.Array(PriceVariantSchema, {

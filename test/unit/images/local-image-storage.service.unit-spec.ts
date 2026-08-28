@@ -53,6 +53,19 @@ describe('LocalImageStorageService', () => {
     ).resolves.toEqual(Buffer.from('x'));
   });
 
+  it('reads the exact bytes of a saved image', async () => {
+    const content = Buffer.from('stored image');
+    await service.save(CATALOG_ID, IMAGE_KEY, content);
+
+    await expect(service.read(CATALOG_ID, IMAGE_KEY)).resolves.toEqual(content);
+  });
+
+  it('returns the filesystem not-found error for an unknown image', async () => {
+    await expect(service.read(CATALOG_ID, IMAGE_KEY)).rejects.toMatchObject({
+      code: 'ENOENT',
+    });
+  });
+
   it.each([
     ['an invalid catalog ID', '../catalog', IMAGE_KEY],
     ['a traversal image key', CATALOG_ID, '../../secret.webp'],
