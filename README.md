@@ -319,6 +319,8 @@ The TypeBox and validation decision is documented in
 [ADR 0001](docs/adr/0001-catalog-document-runtime-contract.md).
 The multilingual v2 contract and data transition are documented in
 [ADR 0002](docs/adr/0002-catalog-document-v2.md).
+Local image upload and logical image keys are documented in
+[ADR 0003](docs/adr/0003-local-image-upload.md).
 
 ## Deliberate limitations
 
@@ -328,8 +330,8 @@ The multilingual v2 contract and data transition are documented in
 - Draft and published states are not separated.
 - Administrative and public APIs read the same immediately visible document.
 - There are no users or authorization.
-- Redis, AI integration, image upload and storage, search, and events are
-  absent.
+- Redis, AI integration, public image delivery, object storage, search, and
+  events are absent.
 - Locale support is currently limited to `cnr`, `en`, and `ru`.
 - Legacy v1 code is retained only for the finite data conversion.
 
