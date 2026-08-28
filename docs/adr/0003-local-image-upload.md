@@ -114,6 +114,24 @@ The resolved destination is also checked to remain below the configured root.
 The physical path is never exposed through the catalog contract or upload
 response.
 
+### Public reading
+
+Serve stored bytes through the backend:
+
+```http
+GET /api/public/catalogs/:catalogId/images/:imageKey
+```
+
+Reuse the same image-key validation and safe local path resolution as writes.
+Return `400 INVALID_IMAGE_KEY` for an invalid key and translate only a missing
+file (`ENOENT`) into `404 IMAGE_NOT_FOUND`; unexpected filesystem errors remain
+server errors.
+
+Return a Nest `StreamableFile` with the canonical media type derived from the
+validated key. Send `X-Content-Type-Options: nosniff`. Because keys are unique
+and existing files cannot be overwritten, responses use long-lived immutable
+public caching.
+
 ### Test isolation
 
 Filesystem unit tests use a unique directory created with `mkdtemp()`, exercise
@@ -155,7 +173,7 @@ per-file progress and retry.
 
 Not selected because rejected uploads would require temporary-file cleanup and
 validation would occur after a filesystem write. Memory buffering is simpler
-under the 6 MiB limit.
+under the 5 MiB limit.
 
 ### Add draft or published state
 
@@ -181,9 +199,10 @@ replacement succeed.
 
 ## Implementation status
 
-The v2 contract extension, configurable local storage, safe exclusive write,
-signature-based upload service, multipart controller, and isolated filesystem
-test setup are implemented.
+The v2 contract extension, configurable local storage, safe exclusive write and
+read, signature-based upload service, multipart and public-read controllers,
+and isolated filesystem test setup are implemented.
 
-Public image reading and multipart e2e scenarios are not implemented yet. They
-remain required before the local-storage stage is complete.
+E2E scenarios exercise real multipart upload, local byte storage, image-key
+document replacement, public byte reading, size and content rejection, missing
+resources, and invalid keys through an isolated temporary directory.

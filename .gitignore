@@ -8,3 +8,4 @@ npm-debug.log*
 plans/
 AGENTS.md
 *.tsbuildinfo
+/var/catalog-images/

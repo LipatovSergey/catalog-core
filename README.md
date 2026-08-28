@@ -39,11 +39,14 @@ DATABASE_PORT=55432
 DATABASE_USER=catalog
 DATABASE_PASSWORD=catalog_local
 DATABASE_NAME=catalog
+IMAGE_STORAGE_DIR=./var/catalog-images
 ```
 
-All database variables are required and validated during startup.
-`.env.development` is ignored by Git. Production ignores env files and expects
-the deployment environment to provide the variables.
+All listed variables are required and validated during startup. Relative image
+storage paths are resolved from the directory where the Node.js process starts.
+The local `var/catalog-images` directory and `.env.development` are ignored by
+Git. Production ignores env files and should use an absolute path on persistent
+storage.
 
 Start the development and test PostgreSQL instances:
 
@@ -77,7 +80,9 @@ pnpm test:e2e
 
 Unit tests do not require PostgreSQL. E2E tests use `.env.test` and connect to
 the real test PostgreSQL instance on port `55433`. They apply migrations, clear
-their data between scenarios, and exercise the complete HTTP-to-database flow.
+their data between scenarios, and exercise the complete HTTP-to-database and
+HTTP-to-filesystem flows. Each suite uses and removes an isolated temporary
+image directory.
 
 ## Catalog document contract
 
@@ -233,6 +238,38 @@ curl http://localhost:3000/api/catalogs/CATALOG_ID
 curl http://localhost:3000/api/public/catalogs/CATALOG_ID
 ```
 
+Upload one image for an existing catalog using the multipart field `file`:
+
+```bash
+curl -X POST http://localhost:3000/api/catalogs/CATALOG_ID/images \
+  -F 'file=@./dish.png'
+```
+
+The backend accepts JPEG, PNG, and WebP files up to 5 MiB, determines the
+format from the file bytes, stores the file outside PostgreSQL, and returns a
+server-generated logical key:
+
+```json
+{
+  "imageKey": "550e8400-e29b-41d4-a716-446655440000.png"
+}
+```
+
+The client places this key into the intended Item and sends the complete
+document through the existing `PUT` endpoint. Uploading an image does not
+modify the catalog document automatically.
+
+Read the stored image publicly through the catalog and logical key:
+
+```bash
+curl \
+  http://localhost:3000/api/public/catalogs/CATALOG_ID/images/IMAGE_KEY \
+  --output image.png
+```
+
+Image responses use the canonical media type, disable content sniffing, and are
+cached as immutable because an existing key is never overwritten.
+
 `PUT` performs a complete replacement. Merge, `PATCH`, and JSON Patch are not
 supported.
 
@@ -330,8 +367,9 @@ Local image upload and logical image keys are documented in
 - Draft and published states are not separated.
 - Administrative and public APIs read the same immediately visible document.
 - There are no users or authorization.
-- Redis, AI integration, public image delivery, object storage, search, and
-  events are absent.
+- Image deletion, orphan cleanup, resizing, thumbnails, and full decoder
+  validation are absent.
+- Redis, AI integration, object storage, search, and events are absent.
 - Locale support is currently limited to `cnr`, `en`, and `ru`.
 - Legacy v1 code is retained only for the finite data conversion.
 
@@ -340,4 +378,4 @@ Local image upload and logical image keys are documented in
 Potential later work includes optimistic concurrency, immutable revisions,
 separate draft and published states, additional locales, public translation
 fallback, AI-assisted import, external AuthCore integration, object storage,
-public caching, search, and an outbox when real event consumers exist.
+search, and an outbox when real event consumers exist.
