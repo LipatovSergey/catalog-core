@@ -1,8 +1,10 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
-import { AppModule } from '../../src/app.module';
 import { configureApp } from '../../src/configure-app';
 import { InitialCatalogs1720000000000 } from '../../src/migrations/1720000000000-InitialCatalogs';
 import { RemoveCatalogSlug1720000000001 } from '../../src/migrations/1720000000001-RemoveCatalogSlug';
@@ -73,8 +75,16 @@ function fullCatalogDocumentV2() {
 describe('Catalog Core (e2e)', () => {
   let app: INestApplication;
   let database: DataSource;
+  let imageStorageDirectory: string;
 
   beforeAll(async () => {
+    imageStorageDirectory = await mkdtemp(
+      join(tmpdir(), 'catalog-core-images-e2e-'),
+    );
+    process.env.IMAGE_STORAGE_DIR = imageStorageDirectory;
+
+    const { AppModule } = await import('../../src/app.module');
+
     database = new DataSource({
       type: 'postgres',
       host: process.env.DATABASE_HOST,
@@ -109,6 +119,8 @@ describe('Catalog Core (e2e)', () => {
     if (database?.isInitialized) {
       await database.destroy();
     }
+    await rm(imageStorageDirectory, { recursive: true, force: true });
+    delete process.env.IMAGE_STORAGE_DIR;
   });
 
   it('reports application and PostgreSQL health', async () => {

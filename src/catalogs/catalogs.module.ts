@@ -10,5 +10,6 @@ import { PublicCatalogsController } from './public-catalogs.controller';
   imports: [TypeOrmModule.forFeature([CatalogEntity])],
   controllers: [CatalogsController, PublicCatalogsController],
   providers: [CatalogsService, CatalogDocumentPipe],
+  exports: [CatalogsService],
 })
 export class CatalogsModule {}

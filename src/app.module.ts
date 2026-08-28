@@ -5,6 +5,7 @@ import { CatalogsModule } from './catalogs/catalogs.module';
 import { validateEnvironment } from './config/environment';
 import { createTypeOrmOptions } from './database/typeorm-options';
 import { HealthModule } from './health/health.module';
+import { ImagesModule } from './images/images.module';
 
 const environment = process.env.NODE_ENV ?? 'development';
 
@@ -22,6 +23,7 @@ const environment = process.env.NODE_ENV ?? 'development';
     }),
     HealthModule,
     CatalogsModule,
+    ImagesModule,
   ],
 })
 export class AppModule {}
