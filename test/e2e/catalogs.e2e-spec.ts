@@ -1,13 +1,10 @@
-import { INestApplication } from '@nestjs/common';
-import { Test } from '@nestjs/testing';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { type INestApplication } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import request from 'supertest';
-import { configureApp } from '../../src/configure-app';
-import { InitialCatalogs1720000000000 } from '../../src/migrations/1720000000000-InitialCatalogs';
-import { RemoveCatalogSlug1720000000001 } from '../../src/migrations/1720000000001-RemoveCatalogSlug';
+import {
+  createE2eTestContext,
+  type E2eTestContext,
+} from './support/e2e-test-context';
 
 function uuid(index: number): string {
   return `00000000-0000-4000-8000-${index.toString(16).padStart(12, '0')}`;
@@ -75,52 +72,20 @@ function fullCatalogDocumentV2() {
 describe('Catalog Core (e2e)', () => {
   let app: INestApplication;
   let database: DataSource;
-  let imageStorageDirectory: string;
+  let context: E2eTestContext;
 
   beforeAll(async () => {
-    imageStorageDirectory = await mkdtemp(
-      join(tmpdir(), 'catalog-core-images-e2e-'),
-    );
-    process.env.IMAGE_STORAGE_DIR = imageStorageDirectory;
-
-    const { AppModule } = await import('../../src/app.module');
-
-    database = new DataSource({
-      type: 'postgres',
-      host: process.env.DATABASE_HOST,
-      port: Number(process.env.DATABASE_PORT),
-      username: process.env.DATABASE_USER,
-      password: process.env.DATABASE_PASSWORD,
-      database: process.env.DATABASE_NAME,
-      uuidExtension: 'pgcrypto',
-      migrations: [
-        InitialCatalogs1720000000000,
-        RemoveCatalogSlug1720000000001,
-      ],
-      synchronize: false,
-    });
-    await database.initialize();
-    await database.runMigrations();
-
-    const module = await Test.createTestingModule({
-      imports: [AppModule],
-    }).compile();
-    app = module.createNestApplication({ bodyParser: false });
-    configureApp(app);
-    await app.init();
+    context = await createE2eTestContext();
+    app = context.app;
+    database = context.database;
   });
 
   beforeEach(async () => {
-    await database.query('TRUNCATE TABLE "catalogs"');
+    await context.reset();
   });
 
   afterAll(async () => {
-    await app?.close();
-    if (database?.isInitialized) {
-      await database.destroy();
-    }
-    await rm(imageStorageDirectory, { recursive: true, force: true });
-    delete process.env.IMAGE_STORAGE_DIR;
+    await context.close();
   });
 
   it('reports application and PostgreSQL health', async () => {
@@ -171,9 +136,7 @@ describe('Catalog Core (e2e)', () => {
       .post('/api/catalogs')
       .send(documentV1)
       .expect(400)
-      .expect(({ body }) =>
-        expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'),
-      );
+      .expect(({ body }) => expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'));
 
     const created = await request(app.getHttpServer())
       .post('/api/catalogs')
@@ -184,9 +147,7 @@ describe('Catalog Core (e2e)', () => {
       .put(`/api/catalogs/${created.body.id}/document`)
       .send(documentV1)
       .expect(400)
-      .expect(({ body }) =>
-        expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'),
-      );
+      .expect(({ body }) => expect(body.code).toBe('INVALID_CATALOG_DOCUMENT'));
   });
 
   it('returns useful paths for structural validation errors', async () => {
