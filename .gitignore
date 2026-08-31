@@ -9,3 +9,4 @@ plans/
 AGENTS.md
 *.tsbuildinfo
 /var/catalog-images/
+posting/
