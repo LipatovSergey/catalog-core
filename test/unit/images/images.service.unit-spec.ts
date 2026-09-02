@@ -1,12 +1,12 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ImageStorage } from '../../../src/images/image-storage.abstract';
 import { ImagesService } from '../../../src/images/images.service';
-import { LocalImageStorageService } from '../../../src/images/local-image-storage.service';
 
 const CATALOG_ID = '4cec0b8a-01d1-4afe-a8fe-d529767baa80';
 
 describe('ImagesService', () => {
-  let save: jest.MockedFunction<LocalImageStorageService['save']>;
-  let read: jest.MockedFunction<LocalImageStorageService['read']>;
+  let save: jest.MockedFunction<ImageStorage['save']>;
+  let read: jest.MockedFunction<ImageStorage['read']>;
   let service: ImagesService;
 
   beforeEach(() => {
@@ -15,7 +15,7 @@ describe('ImagesService', () => {
     service = new ImagesService({
       save,
       read,
-    } as unknown as LocalImageStorageService);
+    });
   });
 
   it.each([

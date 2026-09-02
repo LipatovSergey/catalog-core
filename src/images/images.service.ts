@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { IMAGE_KEY_REGEXP } from './image-key';
-import { LocalImageStorageService } from './local-image-storage.service';
+import { ImageStorage } from './image-storage.abstract';
 
 type ImageExtension = 'jpg' | 'png' | 'webp';
 
@@ -15,7 +15,7 @@ const PNG_SIGNATURE = Buffer.from([
 
 @Injectable()
 export class ImagesService {
-  constructor(private readonly storage: LocalImageStorageService) {}
+  constructor(private readonly storage: ImageStorage) {}
 
   async upload(catalogId: string, content: Buffer): Promise<string> {
     const extension = this.detectExtension(content);

@@ -5,9 +5,10 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { isUUID } from 'class-validator';
 import { getRequiredConfig } from '../config/environment';
 import { IMAGE_KEY_REGEXP } from './image-key';
+import type { ImageStorage } from './image-storage.abstract';
 
 @Injectable()
-export class LocalImageStorageService {
+export class LocalImageStorageService implements ImageStorage {
   private readonly storageRoot: string;
 
   constructor(config: ConfigService) {
