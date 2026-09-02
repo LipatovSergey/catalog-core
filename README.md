@@ -48,11 +48,17 @@ The local `var/catalog-images` directory and `.env.development` are ignored by
 Git. Production ignores env files and should use an absolute path on persistent
 storage.
 
-Start the development and test PostgreSQL instances:
+Start the development and test PostgreSQL instances and the local
+S3-compatible object storage:
 
 ```bash
-docker compose up -d postgres postgres-test
+docker compose up -d postgres postgres-test minio
 ```
+
+MinIO exposes its S3 API at `http://localhost:9000` and its web console at
+`http://localhost:9001`. For local development, sign in to the console with
+username `catalog` and password `catalog_local_minio`. The MinIO ports are
+bound to the loopback interface and are not exposed to the local network.
 
 Apply or revert development migrations:
 

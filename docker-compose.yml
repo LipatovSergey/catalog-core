@@ -31,5 +31,23 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
 
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: catalog
+      MINIO_ROOT_PASSWORD: catalog_local_minio
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+    volumes:
+      - catalog_minio_data:/data
+
 volumes:
   catalog_postgres_data:
+  catalog_minio_data:
