@@ -39,14 +39,32 @@ DATABASE_PORT=55432
 DATABASE_USER=catalog
 DATABASE_PASSWORD=catalog_local
 DATABASE_NAME=catalog
+IMAGE_STORAGE_DRIVER=local
 IMAGE_STORAGE_DIR=./var/catalog-images
 ```
 
-All listed variables are required and validated during startup. Relative image
+Set `IMAGE_STORAGE_DRIVER` to `local` to store images on the application
+filesystem. In this mode, `IMAGE_STORAGE_DIR` is required. Relative image
 storage paths are resolved from the directory where the Node.js process starts.
 The local `var/catalog-images` directory and `.env.development` are ignored by
-Git. Production ignores env files and should use an absolute path on persistent
-storage.
+Git.
+
+To use the local MinIO instance instead, set:
+
+```dotenv
+IMAGE_STORAGE_DRIVER=s3
+S3_ENDPOINT=http://localhost:9000
+S3_REGION=us-east-1
+S3_BUCKET=catalog-images
+S3_ACCESS_KEY_ID=catalog
+S3_SECRET_ACCESS_KEY=catalog_local_minio
+S3_FORCE_PATH_STYLE=true
+```
+
+`S3_ENDPOINT` and `S3_FORCE_PATH_STYLE=true` adapt the AWS S3 client to MinIO.
+For Amazon S3, the endpoint can be omitted and credentials can come from the
+AWS SDK default credential chain instead of the env file. Configuration is
+validated during application startup. Production ignores env files.
 
 Start the development and test PostgreSQL instances and the local
 S3-compatible object storage:
