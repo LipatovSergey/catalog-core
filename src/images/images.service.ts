@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { IMAGE_KEY_REGEXP } from './image-key';
+import { ImageNotFoundError } from './image-not-found.error';
 import { ImageStorage } from './image-storage.abstract';
 
 type ImageExtension = 'jpg' | 'png' | 'webp';
@@ -42,7 +43,7 @@ export class ImagesService {
     try {
       return await this.storage.read(catalogId, imageKey);
     } catch (error: unknown) {
-      if (this.isFileNotFoundError(error)) {
+      if (error instanceof ImageNotFoundError) {
         throw new NotFoundException({
           code: 'IMAGE_NOT_FOUND',
           message: 'Image not found',
@@ -78,14 +79,5 @@ export class ImagesService {
     }
 
     return undefined;
-  }
-
-  private isFileNotFoundError(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      error.code === 'ENOENT'
-    );
   }
 }

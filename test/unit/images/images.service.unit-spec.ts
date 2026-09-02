@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { ImageNotFoundError } from '../../../src/images/image-not-found.error';
 import { ImageStorage } from '../../../src/images/image-storage.abstract';
 import { ImagesService } from '../../../src/images/images.service';
 
@@ -65,10 +66,7 @@ describe('ImagesService', () => {
   });
 
   it('translates a missing file into an image not-found response', async () => {
-    const error = Object.assign(new Error('File not found'), {
-      code: 'ENOENT',
-    });
-    read.mockRejectedValue(error);
+    read.mockRejectedValue(new ImageNotFoundError());
 
     await expect(
       service.read(CATALOG_ID, '550e8400-e29b-41d4-a716-446655440000.webp'),

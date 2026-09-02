@@ -5,6 +5,7 @@ import { dirname, relative, resolve, sep } from 'node:path';
 import { isUUID } from 'class-validator';
 import { getRequiredConfig } from '../config/environment';
 import { IMAGE_KEY_REGEXP } from './image-key';
+import { ImageNotFoundError } from './image-not-found.error';
 import type { ImageStorage } from './image-storage.abstract';
 
 @Injectable()
@@ -26,9 +27,17 @@ export class LocalImageStorageService implements ImageStorage {
     await writeFile(imagePath, content, { flag: 'wx' });
   }
 
-  read(catalogId: string, imageKey: string): Promise<Buffer> {
+  async read(catalogId: string, imageKey: string): Promise<Buffer> {
     const imagePath = this.resolveImagePath(catalogId, imageKey);
-    return readFile(imagePath);
+
+    try {
+      return await readFile(imagePath);
+    } catch (error: unknown) {
+      if (this.isFileNotFoundError(error)) {
+        throw new ImageNotFoundError({ cause: error });
+      }
+      throw error;
+    }
   }
 
   private resolveImagePath(catalogId: string, imageKey: string): string {
@@ -56,5 +65,14 @@ export class LocalImageStorageService implements ImageStorage {
     }
 
     return imagePath;
+  }
+
+  private isFileNotFoundError(error: unknown): boolean {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'ENOENT'
+    );
   }
 }

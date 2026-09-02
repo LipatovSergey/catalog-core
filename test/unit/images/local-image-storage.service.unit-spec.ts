@@ -2,6 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { ImageNotFoundError } from '../../../src/images/image-not-found.error';
 import { LocalImageStorageService } from '../../../src/images/local-image-storage.service';
 
 const CATALOG_ID = '4cec0b8a-01d1-4afe-a8fe-d529767baa80';
@@ -60,10 +61,10 @@ describe('LocalImageStorageService', () => {
     await expect(service.read(CATALOG_ID, IMAGE_KEY)).resolves.toEqual(content);
   });
 
-  it('returns the filesystem not-found error for an unknown image', async () => {
-    await expect(service.read(CATALOG_ID, IMAGE_KEY)).rejects.toMatchObject({
-      code: 'ENOENT',
-    });
+  it('returns a storage-independent error for an unknown image', async () => {
+    await expect(service.read(CATALOG_ID, IMAGE_KEY)).rejects.toBeInstanceOf(
+      ImageNotFoundError,
+    );
   });
 
   it.each([
