@@ -104,11 +104,12 @@ pnpm test:unit
 pnpm test:e2e
 ```
 
-Unit tests do not require PostgreSQL. E2E tests use `.env.test` and connect to
-the real test PostgreSQL instance on port `55433`. They apply migrations, clear
-their data between scenarios, and exercise the complete HTTP-to-database and
-HTTP-to-filesystem flows. Each suite uses and removes an isolated temporary
-image directory.
+Unit tests do not require external services. E2E tests use `.env.test` and
+connect to the test PostgreSQL instance on port `55433` and MinIO on port
+`9000`. They apply migrations, clear their data between scenarios, and exercise
+the complete HTTP-to-database and image-storage flows. Filesystem tests use an
+isolated temporary directory. S3 tests create an isolated bucket and remove it
+after the suite.
 
 ## Catalog document contract
 
