@@ -5,7 +5,5 @@ export abstract class ImageStorage {
     content: Buffer,
   ): Promise<void>;
 
-  abstract read(catalogId: string, imageKey: string): Promise<Buffer>;
-
   abstract getPublicUrl(catalogId: string, imageKey: string): string;
 }

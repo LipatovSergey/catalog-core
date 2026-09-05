@@ -9,29 +9,9 @@ const databaseConfig = {
 };
 
 describe('validateEnvironment', () => {
-  it('accepts local image storage configuration', () => {
+  it('accepts S3 configuration', () => {
     const config = {
       ...databaseConfig,
-      IMAGE_STORAGE_DRIVER: 'local',
-      IMAGE_STORAGE_DIR: './var/catalog-images',
-    };
-
-    expect(validateEnvironment(config)).toBe(config);
-  });
-
-  it('requires a local directory only for the local driver', () => {
-    expect(() =>
-      validateEnvironment({
-        ...databaseConfig,
-        IMAGE_STORAGE_DRIVER: 'local',
-      }),
-    ).toThrow('Missing required environment variable: IMAGE_STORAGE_DIR');
-  });
-
-  it('accepts S3 configuration without local storage configuration', () => {
-    const config = {
-      ...databaseConfig,
-      IMAGE_STORAGE_DRIVER: 's3',
       S3_REGION: 'us-east-1',
       S3_BUCKET: 'catalog-images',
       S3_PUBLIC_BASE_URL: 'http://localhost:9000/catalog-images/',
@@ -45,11 +25,10 @@ describe('validateEnvironment', () => {
   });
 
   it.each(['S3_REGION', 'S3_BUCKET', 'S3_PUBLIC_BASE_URL'])(
-    'requires %s for the S3 driver',
+    'requires %s',
     (key) => {
       const config: Record<string, unknown> = {
         ...databaseConfig,
-        IMAGE_STORAGE_DRIVER: 's3',
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'catalog-images',
         S3_PUBLIC_BASE_URL: 'http://localhost:9000/catalog-images/',
@@ -66,7 +45,6 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({
         ...databaseConfig,
-        IMAGE_STORAGE_DRIVER: 's3',
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'catalog-images',
         S3_PUBLIC_BASE_URL: 'http://localhost:9000/catalog-images/',
@@ -81,21 +59,11 @@ describe('validateEnvironment', () => {
     expect(() =>
       validateEnvironment({
         ...databaseConfig,
-        IMAGE_STORAGE_DRIVER: 's3',
         S3_REGION: 'us-east-1',
         S3_BUCKET: 'catalog-images',
         S3_PUBLIC_BASE_URL: 'http://localhost:9000/catalog-images/',
         S3_FORCE_PATH_STYLE: 'yes',
       }),
     ).toThrow('S3_FORCE_PATH_STYLE must be either true or false');
-  });
-
-  it('rejects an unknown image storage driver', () => {
-    expect(() =>
-      validateEnvironment({
-        ...databaseConfig,
-        IMAGE_STORAGE_DRIVER: 'filesystem',
-      }),
-    ).toThrow('IMAGE_STORAGE_DRIVER must be either local or s3');
   });
 });

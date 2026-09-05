@@ -1,6 +1,6 @@
 # ADR 0003: Local image upload and logical image keys
 
-- Status: Accepted
+- Status: Superseded in part by ADR 0004
 - Date: 2026-08-28
 
 ## Context

@@ -6,7 +6,9 @@ const requiredVariables = [
   'DATABASE_USER',
   'DATABASE_PASSWORD',
   'DATABASE_NAME',
-  'IMAGE_STORAGE_DRIVER',
+  'S3_REGION',
+  'S3_BUCKET',
+  'S3_PUBLIC_BASE_URL',
 ] as const;
 
 export function validateEnvironment(
@@ -28,49 +30,27 @@ export function validateEnvironment(
     throw new Error('DATABASE_PORT must be a valid TCP port');
   }
 
-  const storageDriver = config.IMAGE_STORAGE_DRIVER;
-  if (storageDriver !== 'local' && storageDriver !== 's3') {
-    throw new Error('IMAGE_STORAGE_DRIVER must be either local or s3');
+  const accessKeyId = config.S3_ACCESS_KEY_ID;
+  const secretAccessKey = config.S3_SECRET_ACCESS_KEY;
+  if (
+    (hasNonEmptyString(accessKeyId) && !hasNonEmptyString(secretAccessKey)) ||
+    (!hasNonEmptyString(accessKeyId) && hasNonEmptyString(secretAccessKey))
+  ) {
+    throw new Error(
+      'S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be provided together',
+    );
   }
 
-  if (storageDriver === 'local') {
-    requireVariables(config, ['IMAGE_STORAGE_DIR']);
-  } else {
-    requireVariables(config, ['S3_REGION', 'S3_BUCKET', 'S3_PUBLIC_BASE_URL']);
-
-    const accessKeyId = config.S3_ACCESS_KEY_ID;
-    const secretAccessKey = config.S3_SECRET_ACCESS_KEY;
-    if (
-      (hasNonEmptyString(accessKeyId) && !hasNonEmptyString(secretAccessKey)) ||
-      (!hasNonEmptyString(accessKeyId) && hasNonEmptyString(secretAccessKey))
-    ) {
-      throw new Error(
-        'S3_ACCESS_KEY_ID and S3_SECRET_ACCESS_KEY must be provided together',
-      );
-    }
-
-    const forcePathStyle = config.S3_FORCE_PATH_STYLE;
-    if (
-      forcePathStyle !== undefined &&
-      forcePathStyle !== 'true' &&
-      forcePathStyle !== 'false'
-    ) {
-      throw new Error('S3_FORCE_PATH_STYLE must be either true or false');
-    }
+  const forcePathStyle = config.S3_FORCE_PATH_STYLE;
+  if (
+    forcePathStyle !== undefined &&
+    forcePathStyle !== 'true' &&
+    forcePathStyle !== 'false'
+  ) {
+    throw new Error('S3_FORCE_PATH_STYLE must be either true or false');
   }
 
   return config;
-}
-
-function requireVariables(
-  config: Record<string, unknown>,
-  variables: readonly string[],
-): void {
-  for (const variable of variables) {
-    if (!hasNonEmptyString(config[variable])) {
-      throw new Error(`Missing required environment variable: ${variable}`);
-    }
-  }
 }
 
 function hasNonEmptyString(value: unknown): value is string {

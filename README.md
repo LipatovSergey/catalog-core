@@ -39,20 +39,6 @@ DATABASE_PORT=55432
 DATABASE_USER=catalog
 DATABASE_PASSWORD=catalog_local
 DATABASE_NAME=catalog
-IMAGE_STORAGE_DRIVER=local
-IMAGE_STORAGE_DIR=./var/catalog-images
-```
-
-Set `IMAGE_STORAGE_DRIVER` to `local` to store images on the application
-filesystem. In this mode, `IMAGE_STORAGE_DIR` is required. Relative image
-storage paths are resolved from the directory where the Node.js process starts.
-The local `var/catalog-images` directory and `.env.development` are ignored by
-Git.
-
-To use the local MinIO instance instead, set:
-
-```dotenv
-IMAGE_STORAGE_DRIVER=s3
 S3_ENDPOINT=http://localhost:9000
 S3_REGION=us-east-1
 S3_BUCKET=catalog-images
@@ -111,9 +97,8 @@ pnpm test:e2e
 Unit tests do not require external services. E2E tests use `.env.test` and
 connect to the test PostgreSQL instance on port `55433` and MinIO on port
 `9000`. They apply migrations, clear their data between scenarios, and exercise
-the complete HTTP-to-database and image-storage flows. Filesystem tests use an
-isolated temporary directory. S3 tests create an isolated bucket and remove it
-after the suite.
+the complete HTTP-to-database and S3 flows. Each suite creates an isolated
+bucket and removes it after the suite.
 
 ## Catalog document contract
 
@@ -294,16 +279,15 @@ The client places this key into the intended Item and sends the complete
 document through the existing `PUT` endpoint. Uploading an image does not
 modify the catalog document automatically.
 
-Read the stored image publicly through the catalog and logical key:
+The public catalog response contains an `imageUrls` map from logical keys to
+permanent public object URLs. Read the image directly from the returned URL:
 
 ```bash
-curl \
-  http://localhost:3000/api/public/catalogs/CATALOG_ID/images/IMAGE_KEY \
-  --output image.png
+curl http://localhost:9000/catalog-images/CATALOG_ID/IMAGE_KEY --output image.png
 ```
 
-Image responses use the canonical media type, disable content sniffing, and are
-cached as immutable because an existing key is never overwritten.
+The backend does not proxy image reads. It uploads objects with the canonical
+media type and prevents an existing key from being overwritten.
 
 `PUT` performs a complete replacement. Merge, `PATCH`, and JSON Patch are not
 supported.
@@ -393,6 +377,8 @@ The multilingual v2 contract and data transition are documented in
 [ADR 0002](docs/adr/0002-catalog-document-v2.md).
 Local image upload and logical image keys are documented in
 [ADR 0003](docs/adr/0003-local-image-upload.md).
+The final S3-compatible storage and public-read model is documented in
+[ADR 0004](docs/adr/0004-s3-image-storage.md).
 
 ## Deliberate limitations
 
@@ -404,7 +390,7 @@ Local image upload and logical image keys are documented in
 - There are no users or authorization.
 - Image deletion, orphan cleanup, resizing, thumbnails, and full decoder
   validation are absent.
-- Redis, AI integration, object storage, search, and events are absent.
+- Redis, AI integration, search, and events are absent.
 - Locale support is currently limited to `cnr`, `en`, and `ru`.
 - Legacy v1 code is retained only for the finite data conversion.
 
@@ -412,5 +398,5 @@ Local image upload and logical image keys are documented in
 
 Potential later work includes optimistic concurrency, immutable revisions,
 separate draft and published states, additional locales, public translation
-fallback, AI-assisted import, external AuthCore integration, object storage,
-search, and an outbox when real event consumers exist.
+fallback, AI-assisted import, external AuthCore integration, search, and an
+outbox when real event consumers exist.

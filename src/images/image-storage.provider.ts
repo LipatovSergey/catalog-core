@@ -3,20 +3,9 @@ import { type Provider } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getRequiredConfig } from '../config/environment';
 import { ImageStorage } from './image-storage.abstract';
-import { LocalImageStorageService } from './local-image-storage.service';
 import { S3ImageStorageService } from './s3-image-storage.service';
 
 export function createImageStorage(config: ConfigService): ImageStorage {
-  const driver = getRequiredConfig(config, 'IMAGE_STORAGE_DRIVER');
-
-  if (driver === 'local') {
-    return new LocalImageStorageService(config);
-  }
-
-  if (driver !== 's3') {
-    throw new Error('Unsupported image storage driver');
-  }
-
   const accessKeyId = getOptionalConfig(config, 'S3_ACCESS_KEY_ID');
   const secretAccessKey = getOptionalConfig(config, 'S3_SECRET_ACCESS_KEY');
   const client = new S3Client({

@@ -1,6 +1,5 @@
+import { HeadObjectCommand, ListObjectsV2Command } from '@aws-sdk/client-s3';
 import { type INestApplication } from '@nestjs/common';
-import { access, readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import request from 'supertest';
 import {
   createE2eTestContext,
@@ -87,9 +86,14 @@ describe('Catalog images (e2e)', () => {
     expect(imageKey).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.png$/,
     );
-    await expect(
-      readFile(join(context.imageStorageDirectory, catalogId, imageKey)),
-    ).resolves.toEqual(PNG_IMAGE);
+    const stored = await context.s3.client.send(
+      new HeadObjectCommand({
+        Bucket: context.s3.bucket,
+        Key: `${catalogId}/${imageKey}`,
+      }),
+    );
+    expect(stored.ContentLength).toBe(PNG_IMAGE.length);
+    expect(stored.ContentType).toBe('image/png');
 
     const documentWithImage = {
       ...initialDocument,
@@ -103,24 +107,25 @@ describe('Catalog images (e2e)', () => {
       .put(`/api/catalogs/${catalogId}/document`)
       .send(documentWithImage)
       .expect(200);
-    await request(app.getHttpServer())
+    const publicCatalog = await request(app.getHttpServer())
       .get(`/api/public/catalogs/${catalogId}`)
-      .expect(200)
-      .expect(({ body }) => {
-        expect(body.document.sections[0].items[0].imageKey).toBe(imageKey);
-        expect(body.imageUrls).toEqual({
-          [imageKey]: `/api/public/catalogs/${catalogId}/images/${imageKey}`,
-        });
-      });
+      .expect(200);
+    expect(publicCatalog.body.document.sections[0].items[0].imageKey).toBe(
+      imageKey,
+    );
+    const publicUrl: string = publicCatalog.body.imageUrls[imageKey];
+    expect(publicUrl).toBe(
+      `http://localhost:9000/${context.s3.bucket}/${catalogId}/${imageKey}`,
+    );
 
-    const imageResponse = await request(app.getHttpServer())
+    const imageResponse = await fetch(publicUrl);
+    expect(imageResponse.status).toBe(200);
+    expect(imageResponse.headers.get('content-type')).toBe('image/png');
+    expect(Buffer.from(await imageResponse.arrayBuffer())).toEqual(PNG_IMAGE);
+
+    await request(app.getHttpServer())
       .get(`/api/public/catalogs/${catalogId}/images/${imageKey}`)
-      .expect(200)
-      .expect('Content-Type', 'image/png')
-      .expect('X-Content-Type-Options', 'nosniff')
-      .expect('Cache-Control', 'public, max-age=31536000, immutable');
-
-    expect(imageResponse.body).toEqual(PNG_IMAGE);
+      .expect(404);
   });
 
   it('rejects an upload without a file', async () => {
@@ -152,9 +157,7 @@ describe('Catalog images (e2e)', () => {
       .expect(400)
       .expect(({ body }) => expect(body.code).toBe('UNSUPPORTED_IMAGE_TYPE'));
 
-    await expect(
-      access(join(context.imageStorageDirectory, catalogId)),
-    ).rejects.toMatchObject({ code: 'ENOENT' });
+    await expectBucketToBeEmpty(context);
   });
 
   it('returns 413 without storing an image larger than 5 MiB', async () => {
@@ -172,9 +175,7 @@ describe('Catalog images (e2e)', () => {
       })
       .expect(413);
 
-    await expect(
-      access(join(context.imageStorageDirectory, catalogId)),
-    ).rejects.toMatchObject({ code: 'ENOENT' });
+    await expectBucketToBeEmpty(context);
   });
 
   it('does not store an image for an unknown catalog', async () => {
@@ -185,36 +186,13 @@ describe('Catalog images (e2e)', () => {
       .attach('file', PNG_IMAGE, 'dish.png')
       .expect(404);
 
-    await expect(
-      access(join(context.imageStorageDirectory, unknownCatalogId)),
-    ).rejects.toMatchObject({ code: 'ENOENT' });
+    await expectBucketToBeEmpty(context);
   });
-
-  it('returns 404 for an unknown image key', async () => {
-    const created = await request(app.getHttpServer())
-      .post('/api/catalogs')
-      .send(emptyCatalogDocument())
-      .expect(201);
-    const unknownImageKey = '550e8400-e29b-41d4-a716-446655440000.webp';
-
-    await request(app.getHttpServer())
-      .get(`/api/public/catalogs/${created.body.id}/images/${unknownImageKey}`)
-      .expect(404)
-      .expect(({ body }) => expect(body.code).toBe('IMAGE_NOT_FOUND'));
-  });
-
-  it.each(['not-an-image-key', '..%2Fsecret.png'])(
-    'rejects the invalid public image key %s',
-    async (imageKey) => {
-      const created = await request(app.getHttpServer())
-        .post('/api/catalogs')
-        .send(emptyCatalogDocument())
-        .expect(201);
-
-      await request(app.getHttpServer())
-        .get(`/api/public/catalogs/${created.body.id}/images/${imageKey}`)
-        .expect(400)
-        .expect(({ body }) => expect(body.code).toBe('INVALID_IMAGE_KEY'));
-    },
-  );
 });
+
+async function expectBucketToBeEmpty(context: E2eTestContext): Promise<void> {
+  const result = await context.s3.client.send(
+    new ListObjectsV2Command({ Bucket: context.s3.bucket }),
+  );
+  expect(result.Contents ?? []).toEqual([]);
+}

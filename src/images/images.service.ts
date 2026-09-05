@@ -1,11 +1,5 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
-import { IMAGE_KEY_REGEXP } from './image-key';
-import { ImageNotFoundError } from './image-not-found.error';
 import { ImageStorage } from './image-storage.abstract';
 
 type ImageExtension = 'jpg' | 'png' | 'webp';
@@ -30,27 +24,6 @@ export class ImagesService {
     const imageKey = `${randomUUID()}.${extension}`;
     await this.storage.save(catalogId, imageKey, content);
     return imageKey;
-  }
-
-  async read(catalogId: string, imageKey: string): Promise<Buffer> {
-    if (!IMAGE_KEY_REGEXP.test(imageKey)) {
-      throw new BadRequestException({
-        code: 'INVALID_IMAGE_KEY',
-        message: 'Image key is invalid',
-      });
-    }
-
-    try {
-      return await this.storage.read(catalogId, imageKey);
-    } catch (error: unknown) {
-      if (error instanceof ImageNotFoundError) {
-        throw new NotFoundException({
-          code: 'IMAGE_NOT_FOUND',
-          message: 'Image not found',
-        });
-      }
-      throw error;
-    }
   }
 
   private detectExtension(content: Buffer): ImageExtension | undefined {

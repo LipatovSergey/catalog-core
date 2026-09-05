@@ -1,11 +1,6 @@
-import {
-  GetObjectCommand,
-  PutObjectCommand,
-  type S3Client,
-} from '@aws-sdk/client-s3';
+import { PutObjectCommand, type S3Client } from '@aws-sdk/client-s3';
 import { isUUID } from 'class-validator';
 import { IMAGE_KEY_REGEXP } from './image-key';
-import { ImageNotFoundError } from './image-not-found.error';
 import type { ImageStorage } from './image-storage.abstract';
 
 export class S3ImageStorageService implements ImageStorage {
@@ -33,28 +28,6 @@ export class S3ImageStorageService implements ImageStorage {
         IfNoneMatch: '*',
       }),
     );
-  }
-
-  async read(catalogId: string, imageKey: string): Promise<Buffer> {
-    try {
-      const result = await this.client.send(
-        new GetObjectCommand({
-          Bucket: this.bucket,
-          Key: this.buildObjectKey(catalogId, imageKey),
-        }),
-      );
-
-      if (result.Body === undefined) {
-        throw new Error('S3 returned an image without a body');
-      }
-
-      return Buffer.from(await result.Body.transformToByteArray());
-    } catch (error: unknown) {
-      if (this.isObjectNotFoundError(error)) {
-        throw new ImageNotFoundError({ cause: error });
-      }
-      throw error;
-    }
   }
 
   getPublicUrl(catalogId: string, imageKey: string): string {
@@ -98,14 +71,5 @@ export class S3ImageStorageService implements ImageStorage {
     }
 
     return url.toString().endsWith('/') ? url.toString() : `${url.toString()}/`;
-  }
-
-  private isObjectNotFoundError(error: unknown): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      error.name === 'NoSuchKey'
-    );
   }
 }

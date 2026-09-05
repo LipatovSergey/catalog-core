@@ -10,9 +10,6 @@ import {
 } from '@aws-sdk/client-s3';
 import { config } from 'dotenv';
 import { randomUUID } from 'node:crypto';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import { configureApp } from '../../../src/configure-app';
 import { InitialCatalogs1720000000000 } from '../../../src/migrations/1720000000000-InitialCatalogs';
@@ -21,8 +18,7 @@ import { RemoveCatalogSlug1720000000001 } from '../../../src/migrations/17200000
 export type E2eTestContext = {
   app: INestApplication;
   database: DataSource;
-  imageStorageDirectory: string;
-  s3?: {
+  s3: {
     client: S3Client;
     bucket: string;
   };
@@ -30,32 +26,14 @@ export type E2eTestContext = {
   close(): Promise<void>;
 };
 
-type CreateE2eTestContextOptions = {
-  imageStorageDriver?: 'local' | 's3';
-};
-
-export async function createE2eTestContext(
-  options: CreateE2eTestContextOptions = {},
-): Promise<E2eTestContext> {
+export async function createE2eTestContext(): Promise<E2eTestContext> {
   config({ path: '.env.test', quiet: true });
 
-  const imageStorageDriver = options.imageStorageDriver ?? 'local';
-  const previousImageStorageDriver = process.env.IMAGE_STORAGE_DRIVER;
-  const previousImageStorageDirectory = process.env.IMAGE_STORAGE_DIR;
   const previousS3Bucket = process.env.S3_BUCKET;
   const previousS3PublicBaseUrl = process.env.S3_PUBLIC_BASE_URL;
-  const imageStorageDirectory = await mkdtemp(
-    join(tmpdir(), 'catalog-core-images-e2e-'),
-  );
-  process.env.IMAGE_STORAGE_DRIVER = imageStorageDriver;
-  process.env.IMAGE_STORAGE_DIR = imageStorageDirectory;
-
-  const s3 =
-    imageStorageDriver === 's3' ? await createS3TestStorage() : undefined;
-  if (s3) {
-    process.env.S3_BUCKET = s3.bucket;
-    process.env.S3_PUBLIC_BASE_URL = `${requiredEnvironmentVariable('S3_ENDPOINT').replace(/\/$/, '')}/${s3.bucket}/`;
-  }
+  const s3 = await createS3TestStorage();
+  process.env.S3_BUCKET = s3.bucket;
+  process.env.S3_PUBLIC_BASE_URL = `${requiredEnvironmentVariable('S3_ENDPOINT').replace(/\/$/, '')}/${s3.bucket}/`;
 
   const { AppModule } = await import('../../../src/app.module');
   const database = new DataSource({
@@ -82,36 +60,19 @@ export async function createE2eTestContext(
   return {
     app,
     database,
-    imageStorageDirectory,
     s3,
     async reset(): Promise<void> {
       await database.query('TRUNCATE TABLE "catalogs"');
-      if (s3) {
-        await emptyS3Bucket(s3.client, s3.bucket);
-      } else {
-        await rm(imageStorageDirectory, { recursive: true, force: true });
-        await mkdir(imageStorageDirectory, { recursive: true });
-      }
+      await emptyS3Bucket(s3.client, s3.bucket);
     },
     async close(): Promise<void> {
       await app.close();
       if (database.isInitialized) {
         await database.destroy();
       }
-      await rm(imageStorageDirectory, { recursive: true, force: true });
-      if (s3) {
-        await emptyS3Bucket(s3.client, s3.bucket);
-        await s3.client.send(new DeleteBucketCommand({ Bucket: s3.bucket }));
-        s3.client.destroy();
-      }
-      restoreEnvironmentVariable(
-        'IMAGE_STORAGE_DRIVER',
-        previousImageStorageDriver,
-      );
-      restoreEnvironmentVariable(
-        'IMAGE_STORAGE_DIR',
-        previousImageStorageDirectory,
-      );
+      await emptyS3Bucket(s3.client, s3.bucket);
+      await s3.client.send(new DeleteBucketCommand({ Bucket: s3.bucket }));
+      s3.client.destroy();
       restoreEnvironmentVariable('S3_BUCKET', previousS3Bucket);
       restoreEnvironmentVariable('S3_PUBLIC_BASE_URL', previousS3PublicBaseUrl);
     },
