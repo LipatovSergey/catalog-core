@@ -10,6 +10,10 @@ import { CatalogDocumentValidationError } from './document-validation/catalog-do
 import { type CatalogDocumentV2 } from './document-validation/catalog-document-v2.schema';
 import { parseCatalogDocumentV2 } from './document-validation/catalog-document-v2.parser';
 
+export type ValidatedCatalogEntity = CatalogEntity & {
+  document: CatalogDocumentV2;
+};
+
 @Injectable()
 export class CatalogsService {
   constructor(
@@ -21,10 +25,10 @@ export class CatalogsService {
     return this.catalogs.save(this.catalogs.create({ document }));
   }
 
-  async findById(id: string): Promise<CatalogEntity> {
+  async findById(id: string): Promise<ValidatedCatalogEntity> {
     const catalog = await this.findEntityById(id);
-    catalog.document = this.parseStoredDocument(catalog.document);
-    return catalog;
+    const document = this.parseStoredDocument(catalog.document);
+    return Object.assign(catalog, { document });
   }
 
   async replaceDocument(

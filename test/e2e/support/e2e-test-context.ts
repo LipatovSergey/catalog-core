@@ -5,6 +5,7 @@ import {
   DeleteBucketCommand,
   DeleteObjectsCommand,
   ListObjectsV2Command,
+  PutBucketPolicyCommand,
   S3Client,
 } from '@aws-sdk/client-s3';
 import { config } from 'dotenv';
@@ -42,6 +43,7 @@ export async function createE2eTestContext(
   const previousImageStorageDriver = process.env.IMAGE_STORAGE_DRIVER;
   const previousImageStorageDirectory = process.env.IMAGE_STORAGE_DIR;
   const previousS3Bucket = process.env.S3_BUCKET;
+  const previousS3PublicBaseUrl = process.env.S3_PUBLIC_BASE_URL;
   const imageStorageDirectory = await mkdtemp(
     join(tmpdir(), 'catalog-core-images-e2e-'),
   );
@@ -52,6 +54,7 @@ export async function createE2eTestContext(
     imageStorageDriver === 's3' ? await createS3TestStorage() : undefined;
   if (s3) {
     process.env.S3_BUCKET = s3.bucket;
+    process.env.S3_PUBLIC_BASE_URL = `${requiredEnvironmentVariable('S3_ENDPOINT').replace(/\/$/, '')}/${s3.bucket}/`;
   }
 
   const { AppModule } = await import('../../../src/app.module');
@@ -110,6 +113,7 @@ export async function createE2eTestContext(
         previousImageStorageDirectory,
       );
       restoreEnvironmentVariable('S3_BUCKET', previousS3Bucket);
+      restoreEnvironmentVariable('S3_PUBLIC_BASE_URL', previousS3PublicBaseUrl);
     },
   };
 }
@@ -130,6 +134,22 @@ async function createS3TestStorage(): Promise<{
   const bucket = `catalog-images-e2e-${randomUUID()}`;
 
   await client.send(new CreateBucketCommand({ Bucket: bucket }));
+  await client.send(
+    new PutBucketPolicyCommand({
+      Bucket: bucket,
+      Policy: JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Effect: 'Allow',
+            Principal: '*',
+            Action: ['s3:GetObject'],
+            Resource: [`arn:aws:s3:::${bucket}/*`],
+          },
+        ],
+      }),
+    }),
+  );
 
   return { client, bucket };
 }

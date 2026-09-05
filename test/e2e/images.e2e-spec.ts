@@ -106,9 +106,12 @@ describe('Catalog images (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/public/catalogs/${catalogId}`)
       .expect(200)
-      .expect(({ body }) =>
-        expect(body.document.sections[0].items[0].imageKey).toBe(imageKey),
-      );
+      .expect(({ body }) => {
+        expect(body.document.sections[0].items[0].imageKey).toBe(imageKey);
+        expect(body.imageUrls).toEqual({
+          [imageKey]: `/api/public/catalogs/${catalogId}/images/${imageKey}`,
+        });
+      });
 
     const imageResponse = await request(app.getHttpServer())
       .get(`/api/public/catalogs/${catalogId}/images/${imageKey}`)

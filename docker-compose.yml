@@ -60,7 +60,9 @@ services:
         set -eu
         mc alias set local http://minio:9000 catalog catalog_local_minio
         mc mb --ignore-existing local/catalog-images
-        mc anonymous set none local/catalog-images
+        mc anonymous set-json /config/catalog-images-public-read-policy.json local/catalog-images
+    volumes:
+      - ./docker/minio/catalog-images-public-read-policy.json:/config/catalog-images-public-read-policy.json:ro
 
 volumes:
   catalog_postgres_data:

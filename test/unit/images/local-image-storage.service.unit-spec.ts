@@ -61,6 +61,12 @@ describe('LocalImageStorageService', () => {
     await expect(service.read(CATALOG_ID, IMAGE_KEY)).resolves.toEqual(content);
   });
 
+  it('builds a public backend URL for an image', () => {
+    expect(service.getPublicUrl(CATALOG_ID.toUpperCase(), IMAGE_KEY)).toBe(
+      `/api/public/catalogs/${CATALOG_ID}/images/${IMAGE_KEY}`,
+    );
+  });
+
   it('returns a storage-independent error for an unknown image', async () => {
     await expect(service.read(CATALOG_ID, IMAGE_KEY)).rejects.toBeInstanceOf(
       ImageNotFoundError,

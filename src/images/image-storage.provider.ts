@@ -32,6 +32,7 @@ export function createImageStorage(config: ConfigService): ImageStorage {
   return new S3ImageStorageService(
     client,
     getRequiredConfig(config, 'S3_BUCKET'),
+    getRequiredConfig(config, 'S3_PUBLIC_BASE_URL'),
   );
 }
 

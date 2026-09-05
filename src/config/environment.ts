@@ -36,7 +36,7 @@ export function validateEnvironment(
   if (storageDriver === 'local') {
     requireVariables(config, ['IMAGE_STORAGE_DIR']);
   } else {
-    requireVariables(config, ['S3_REGION', 'S3_BUCKET']);
+    requireVariables(config, ['S3_REGION', 'S3_BUCKET', 'S3_PUBLIC_BASE_URL']);
 
     const accessKeyId = config.S3_ACCESS_KEY_ID;
     const secretAccessKey = config.S3_SECRET_ACCESS_KEY;

@@ -40,6 +40,12 @@ export class LocalImageStorageService implements ImageStorage {
     }
   }
 
+  getPublicUrl(catalogId: string, imageKey: string): string {
+    this.resolveImagePath(catalogId, imageKey);
+
+    return `/api/public/catalogs/${catalogId.toLowerCase()}/images/${imageKey}`;
+  }
+
   private resolveImagePath(catalogId: string, imageKey: string): string {
     if (!isUUID(catalogId)) {
       throw new Error('Invalid catalog ID');

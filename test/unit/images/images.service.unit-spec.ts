@@ -8,14 +8,17 @@ const CATALOG_ID = '4cec0b8a-01d1-4afe-a8fe-d529767baa80';
 describe('ImagesService', () => {
   let save: jest.MockedFunction<ImageStorage['save']>;
   let read: jest.MockedFunction<ImageStorage['read']>;
+  let getPublicUrl: jest.MockedFunction<ImageStorage['getPublicUrl']>;
   let service: ImagesService;
 
   beforeEach(() => {
     save = jest.fn();
     read = jest.fn();
+    getPublicUrl = jest.fn();
     service = new ImagesService({
       save,
       read,
+      getPublicUrl,
     });
   });
 

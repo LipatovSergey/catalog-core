@@ -9,10 +9,15 @@ import { ImageNotFoundError } from './image-not-found.error';
 import type { ImageStorage } from './image-storage.abstract';
 
 export class S3ImageStorageService implements ImageStorage {
+  private readonly publicBaseUrl: string;
+
   constructor(
     private readonly client: S3Client,
     private readonly bucket: string,
-  ) {}
+    publicBaseUrl: string,
+  ) {
+    this.publicBaseUrl = this.normalizePublicBaseUrl(publicBaseUrl);
+  }
 
   async save(
     catalogId: string,
@@ -52,6 +57,12 @@ export class S3ImageStorageService implements ImageStorage {
     }
   }
 
+  getPublicUrl(catalogId: string, imageKey: string): string {
+    const objectKey = this.buildObjectKey(catalogId, imageKey);
+
+    return new URL(objectKey, this.publicBaseUrl).toString();
+  }
+
   private buildObjectKey(catalogId: string, imageKey: string): string {
     if (!isUUID(catalogId)) {
       throw new Error('Invalid catalog ID');
@@ -72,6 +83,21 @@ export class S3ImageStorageService implements ImageStorage {
       return 'image/png';
     }
     return 'image/webp';
+  }
+
+  private normalizePublicBaseUrl(value: string): string {
+    const url = new URL(value);
+
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      throw new Error('S3 public base URL must use HTTP or HTTPS');
+    }
+    if (url.username || url.password || url.search || url.hash) {
+      throw new Error(
+        'S3 public base URL must not contain credentials or query',
+      );
+    }
+
+    return url.toString().endsWith('/') ? url.toString() : `${url.toString()}/`;
   }
 
   private isObjectNotFoundError(error: unknown): boolean {

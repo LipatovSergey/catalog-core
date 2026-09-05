@@ -121,7 +121,10 @@ describe('Catalog Core (e2e)', () => {
     await request(app.getHttpServer())
       .get(`/api/public/catalogs/${id}`)
       .expect(200)
-      .expect(({ body }) => expect(body.document).toEqual(replacement));
+      .expect(({ body }) => {
+        expect(body.document).toEqual(replacement);
+        expect(body.imageUrls).toEqual({});
+      });
   });
 
   it('rejects v1 documents on create and replacement', async () => {

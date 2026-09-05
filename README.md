@@ -56,12 +56,15 @@ IMAGE_STORAGE_DRIVER=s3
 S3_ENDPOINT=http://localhost:9000
 S3_REGION=us-east-1
 S3_BUCKET=catalog-images
+S3_PUBLIC_BASE_URL=http://localhost:9000/catalog-images/
 S3_ACCESS_KEY_ID=catalog
 S3_SECRET_ACCESS_KEY=catalog_local_minio
 S3_FORCE_PATH_STYLE=true
 ```
 
 `S3_ENDPOINT` and `S3_FORCE_PATH_STYLE=true` adapt the AWS S3 client to MinIO.
+`S3_PUBLIC_BASE_URL` is the public URL prefix used to build permanent image
+URLs; it may point to S3 directly or to a CDN.
 For Amazon S3, the endpoint can be omitted and credentials can come from the
 AWS SDK default credential chain instead of the env file. Configuration is
 validated during application startup. Production ignores env files.
@@ -77,8 +80,9 @@ MinIO exposes its S3 API at `http://localhost:9000` and its web console at
 `http://localhost:9001`. For local development, sign in to the console with
 username `catalog` and password `catalog_local_minio`. The MinIO ports are
 bound to the loopback interface and are not exposed to the local network. The
-one-shot `minio-init` service creates the private `catalog-images` bucket if it
-does not exist.
+one-shot `minio-init` service creates the `catalog-images` bucket if it does not
+exist. Its anonymous policy permits reading objects, while listing,
+uploading, and deleting objects still require credentials.
 
 Apply or revert development migrations:
 
@@ -174,6 +178,10 @@ Accepted prices include `"0"`, `"0.5"`, `"12"`, and `"12.50"`. Values such as
 
 The three-letter currency rule validates the format only; it does not maintain
 or validate against the complete ISO 4217 currency list.
+
+The public catalog response keeps this document unchanged and adds an
+`imageUrls` object alongside it. Each stored `imageKey` maps to its current
+public read URL; generated URLs are not persisted in PostgreSQL.
 
 Business invariants are intentionally implemented outside JSON Schema:
 

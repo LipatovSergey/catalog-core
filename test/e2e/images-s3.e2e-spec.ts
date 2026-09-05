@@ -22,6 +22,27 @@ function emptyCatalogDocument() {
   };
 }
 
+function catalogDocumentWithImage(imageKey: string) {
+  return {
+    ...emptyCatalogDocument(),
+    sections: [
+      {
+        id: '00000000-0000-4000-8000-000000000001',
+        title: { en: 'Drinks' },
+        items: [
+          {
+            id: '00000000-0000-4000-8000-000000000002',
+            name: { en: 'Coffee' },
+            imageKey,
+            priceVariants: [{ price: '8' }],
+            available: true,
+          },
+        ],
+      },
+    ],
+  };
+}
+
 describe('Catalog images using S3 storage (e2e)', () => {
   let app: INestApplication;
   let context: E2eTestContext;
@@ -70,6 +91,26 @@ describe('Catalog images using S3 storage (e2e)', () => {
     );
     expect(stored.ContentLength).toBe(PNG_IMAGE.length);
     expect(stored.ContentType).toBe('image/png');
+
+    await request(app.getHttpServer())
+      .put(`/api/catalogs/${catalogId}/document`)
+      .send(catalogDocumentWithImage(imageKey))
+      .expect(200);
+
+    const publicCatalog = await request(app.getHttpServer())
+      .get(`/api/public/catalogs/${catalogId}`)
+      .expect(200);
+    const publicUrl: string = publicCatalog.body.imageUrls[imageKey];
+    expect(publicUrl).toBe(
+      `http://localhost:9000/${s3.bucket}/${catalogId}/${imageKey}`,
+    );
+
+    const directImageResponse = await fetch(publicUrl);
+    expect(directImageResponse.status).toBe(200);
+    expect(directImageResponse.headers.get('content-type')).toBe('image/png');
+    expect(Buffer.from(await directImageResponse.arrayBuffer())).toEqual(
+      PNG_IMAGE,
+    );
 
     const imageResponse = await request(app.getHttpServer())
       .get(`/api/public/catalogs/${catalogId}/images/${imageKey}`)
