@@ -16,10 +16,10 @@ PostgreSQL `JSONB` column.
 ## Requirements
 
 - Node.js 24 or another Node.js release supported by NestJS 11
-- pnpm 10
+- pnpm 11
 - Docker with Docker Compose
 
-The project was initially verified with Node.js 24.18.0, pnpm 10, Docker 29.6.1,
+The project was initially verified with Node.js 24.18.0, pnpm 11.10.0, Docker 29.6.1,
 and Docker Compose 5.3.0.
 
 ## Setup
@@ -73,9 +73,24 @@ uploading, and deleting objects still require credentials.
 Apply or revert development migrations:
 
 ```bash
-pnpm migration:run
-pnpm migration:revert
+pnpm migration:show:dev
+pnpm migration:run:dev
+pnpm migration:revert:dev
 ```
+
+The production image contains the compiled migrations and the TypeORM CLI.
+Run migrations as a separate deployment task before starting the new application
+version:
+
+```bash
+pnpm migration:show:prod
+pnpm migration:run:prod
+pnpm migration:show:prod
+```
+
+Production commands read configuration only from environment variables. A
+production revert command is intentionally not provided: rollback must be
+planned for the concrete migration instead of being run accidentally.
 
 Start the service:
 

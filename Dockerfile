@@ -3,6 +3,7 @@ ARG NODE_VERSION=24.18.0
 FROM node:${NODE_VERSION}-alpine AS base
 
 ENV PNPM_HOME=/pnpm
+ENV COREPACK_HOME=/corepack
 ENV PATH=$PNPM_HOME:$PATH
 
 RUN corepack enable && corepack prepare pnpm@11.10.0 --activate
@@ -28,7 +29,7 @@ COPY src ./src
 
 RUN pnpm build
 
-FROM node:${NODE_VERSION}-alpine AS runtime
+FROM base AS runtime
 
 ENV NODE_ENV=production
 

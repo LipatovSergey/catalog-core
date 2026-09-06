@@ -2,6 +2,7 @@
   "name": "catalog-core",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.10.0",
   "description": "Backend service for storing and publishing catalogs",
   "license": "UNLICENSED",
   "scripts": {
@@ -12,9 +13,12 @@
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
     "format": "prettier --write \"{src,test}/**/*.ts\" \"*.{json,md,yml}\"",
-    "migration:run": "npm run build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:run",
-    "migration:revert": "npm run build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:revert",
-    "test": "npm run test:unit && npm run test:e2e",
+    "migration:show:dev": "pnpm build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:show",
+    "migration:run:dev": "pnpm build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:run",
+    "migration:revert:dev": "pnpm build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:revert",
+    "migration:show:prod": "NODE_ENV=production typeorm -d dist/database/data-source.js migration:show",
+    "migration:run:prod": "NODE_ENV=production typeorm -d dist/database/data-source.js migration:run",
+    "test": "pnpm test:unit && pnpm test:e2e",
     "test:unit": "NODE_ENV=test jest --config test/jest-unit.json",
     "test:e2e": "NODE_ENV=test jest --config test/jest-e2e.json --runInBand"
   },
