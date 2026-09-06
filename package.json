@@ -6,8 +6,8 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "start": "nest start --env-file .env.development",
-    "start:dev": "nest start --watch --env-file .env.development",
+    "start": "NODE_ENV=development nest start",
+    "start:dev": "NODE_ENV=development nest start --watch",
     "start:prod": "NODE_ENV=production node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,test}/**/*.ts\" --fix",
@@ -15,7 +15,7 @@
     "migration:run": "npm run build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:run",
     "migration:revert": "npm run build && NODE_ENV=development typeorm -d dist/database/data-source.js migration:revert",
     "test": "npm run test:unit && npm run test:e2e",
-    "test:unit": "jest --config test/jest-unit.json",
+    "test:unit": "NODE_ENV=test jest --config test/jest-unit.json",
     "test:e2e": "NODE_ENV=test jest --config test/jest-e2e.json --runInBand"
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",

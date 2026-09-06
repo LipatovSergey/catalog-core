@@ -1,10 +1,11 @@
 import { config } from 'dotenv';
 import { DataSource } from 'typeorm';
 import { CatalogEntity } from '../catalogs/catalog.entity';
+import { getNodeEnvironment } from '../config/node-environment';
 import { InitialCatalogs1720000000000 } from '../migrations/1720000000000-InitialCatalogs';
 import { RemoveCatalogSlug1720000000001 } from '../migrations/1720000000001-RemoveCatalogSlug';
 
-const environment = process.env.NODE_ENV ?? 'development';
+const environment = getNodeEnvironment();
 
 if (environment !== 'production') {
   config({ path: `.env.${environment}` });
