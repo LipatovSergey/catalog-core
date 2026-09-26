@@ -3,7 +3,7 @@ name: Deploy CatalogCore
 on:
   push:
     branches:
-      - deployment
+      - deploy
 
 permissions:
   id-token: write
