@@ -38,9 +38,10 @@ WORKDIR /app
 COPY --from=production-dependencies --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
+COPY --chown=node:node certs/global-bundle.pem ./certs/global-bundle.pem
 
 USER node
 
-EXPOSE 3000
+EXPOSE 3100
 
 CMD ["node", "dist/main.js"]

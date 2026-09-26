@@ -4,6 +4,7 @@ import { CatalogEntity } from '../catalogs/catalog.entity';
 import { getNodeEnvironment } from '../config/node-environment';
 import { InitialCatalogs1720000000000 } from '../migrations/1720000000000-InitialCatalogs';
 import { RemoveCatalogSlug1720000000001 } from '../migrations/1720000000001-RemoveCatalogSlug';
+import { createDatabaseSslOptions } from './database-ssl';
 
 const environment = getNodeEnvironment();
 
@@ -26,6 +27,10 @@ export default new DataSource({
   username: required('DATABASE_USER'),
   password: required('DATABASE_PASSWORD'),
   database: required('DATABASE_NAME'),
+  ssl: createDatabaseSslOptions(
+    process.env.DATABASE_SSL,
+    process.env.DATABASE_SSL_CA_PATH,
+  ),
   uuidExtension: 'pgcrypto',
   entities: [CatalogEntity],
   migrations: [InitialCatalogs1720000000000, RemoveCatalogSlug1720000000001],
