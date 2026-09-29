@@ -13,8 +13,12 @@ env:
   AWS_REGION: eu-north-1
   ECR_REPOSITORY: catalog-core
 
+  ECS_CLUSTER: jovani-core-cluster
+  ECS_SERVICE: catalog-core-service
+  ECS_CONTAINER_NAME: catalog-core
+
 jobs:
-  build-and-push:
+  build-and-register:
     runs-on: ubuntu-latest
 
     steps:
@@ -32,16 +36,78 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image
+        id: build-image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker build \
-            -t "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" \
-            .
+          IMAGE_URI="$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-          docker push \
-            "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t "$IMAGE_URI" .
+          docker push "$IMAGE_URI"
 
-          echo "Pushed image:"
-          echo "$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
+          echo "Pushed image: $IMAGE_URI"
+
+      - name: Get current ECS task definition
+        id: current-task-definition
+        run: |
+          TASK_DEFINITION_ARN=$(aws ecs describe-services \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --query 'services[0].taskDefinition' \
+            --output text)
+
+          echo "arn=$TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+          echo "Current task definition: $TASK_DEFINITION_ARN"
+
+      - name: Create new task definition JSON
+        env:
+          CURRENT_TASK_DEFINITION: ${{ steps.current-task-definition.outputs.arn }}
+          IMAGE_URI: ${{ steps.build-image.outputs.image }}
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$CURRENT_TASK_DEFINITION" \
+            --query 'taskDefinition' \
+            --output json > current-task-definition.json
+
+          jq \
+            --arg IMAGE "$IMAGE_URI" \
+            --arg CONTAINER "$ECS_CONTAINER_NAME" \
+            '
+            .containerDefinitions |= map(
+              if .name == $CONTAINER
+              then .image = $IMAGE
+              else .
+              end
+            )
+            |
+            del(
+              .taskDefinitionArn,
+              .revision,
+              .status,
+              .requiresAttributes,
+              .compatibilities,
+              .registeredAt,
+              .registeredBy
+            )
+            ' \
+            current-task-definition.json \
+            > new-task-definition.json
+
+          echo "New image:"
+          jq -r \
+            --arg CONTAINER "$ECS_CONTAINER_NAME" \
+            '.containerDefinitions[] | select(.name == $CONTAINER) | .image' \
+            new-task-definition.json
+
+      - name: Register new ECS task definition revision
+        id: register-task-definition
+        run: |
+          NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition \
+            --cli-input-json file://new-task-definition.json \
+            --query 'taskDefinition.taskDefinitionArn' \
+            --output text)
+
+          echo "arn=$NEW_TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+          echo "Registered task definition: $NEW_TASK_DEFINITION_ARN"
