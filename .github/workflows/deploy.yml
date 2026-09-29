@@ -202,3 +202,23 @@ jobs:
           fi
 
           echo "Database migrations completed successfully."
+      - name: Deploy new task definition to ECS service
+        env:
+          TASK_DEFINITION_ARN: ${{ steps.register-task-definition.outputs.arn }}
+        run: |
+          echo "Deploying task definition:"
+          echo "$TASK_DEFINITION_ARN"
+
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --task-definition "$TASK_DEFINITION_ARN" \
+            > /dev/null
+
+          echo "Waiting for ECS service to become stable..."
+
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE"
+
+          echo "ECS deployment completed successfully."
