@@ -18,7 +18,7 @@ env:
   ECS_CONTAINER_NAME: catalog-core
 
 jobs:
-  build-and-register:
+  build-register-and-migrate:
     runs-on: ubuntu-latest
 
     steps:
@@ -49,27 +49,42 @@ jobs:
           echo "image=$IMAGE_URI" >> "$GITHUB_OUTPUT"
           echo "Pushed image: $IMAGE_URI"
 
-      - name: Get current ECS task definition
-        id: current-task-definition
+      - name: Get current ECS configuration
+        id: ecs-config
         run: |
-          TASK_DEFINITION_ARN=$(aws ecs describe-services \
+          aws ecs describe-services \
             --cluster "$ECS_CLUSTER" \
             --services "$ECS_SERVICE" \
-            --query 'services[0].taskDefinition' \
-            --output text)
+            --output json \
+            > service.json
 
-          echo "arn=$TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+          TASK_DEFINITION_ARN=$(jq -r \
+            '.services[0].taskDefinition' \
+            service.json)
+
+          NETWORK_CONFIG=$(jq -c \
+            '{
+              awsvpcConfiguration:
+                .services[0].networkConfiguration.awsvpcConfiguration
+            }' \
+            service.json)
+
+          echo "task-definition-arn=$TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
+          echo "network-config=$NETWORK_CONFIG" >> "$GITHUB_OUTPUT"
+
           echo "Current task definition: $TASK_DEFINITION_ARN"
+          echo "Migration task will use the ECS service network configuration."
 
       - name: Create new task definition JSON
         env:
-          CURRENT_TASK_DEFINITION: ${{ steps.current-task-definition.outputs.arn }}
+          CURRENT_TASK_DEFINITION: ${{ steps.ecs-config.outputs.task-definition-arn }}
           IMAGE_URI: ${{ steps.build-image.outputs.image }}
         run: |
           aws ecs describe-task-definition \
             --task-definition "$CURRENT_TASK_DEFINITION" \
             --query 'taskDefinition' \
-            --output json > current-task-definition.json
+            --output json \
+            > current-task-definition.json
 
           jq \
             --arg IMAGE "$IMAGE_URI" \
@@ -98,7 +113,9 @@ jobs:
           echo "New image:"
           jq -r \
             --arg CONTAINER "$ECS_CONTAINER_NAME" \
-            '.containerDefinitions[] | select(.name == $CONTAINER) | .image' \
+            '.containerDefinitions[]
+              | select(.name == $CONTAINER)
+              | .image' \
             new-task-definition.json
 
       - name: Register new ECS task definition revision
@@ -111,3 +128,77 @@ jobs:
 
           echo "arn=$NEW_TASK_DEFINITION_ARN" >> "$GITHUB_OUTPUT"
           echo "Registered task definition: $NEW_TASK_DEFINITION_ARN"
+
+      - name: Run database migrations
+        id: migrations
+        env:
+          TASK_DEFINITION_ARN: ${{ steps.register-task-definition.outputs.arn }}
+          NETWORK_CONFIG: ${{ steps.ecs-config.outputs.network-config }}
+        run: |
+          aws ecs run-task \
+            --cluster "$ECS_CLUSTER" \
+            --launch-type FARGATE \
+            --task-definition "$TASK_DEFINITION_ARN" \
+            --network-configuration "$NETWORK_CONFIG" \
+            --overrides "{
+              \"containerOverrides\": [
+                {
+                  \"name\": \"$ECS_CONTAINER_NAME\",
+                  \"command\": [\"pnpm\", \"migration:run:prod\"]
+                }
+              ]
+            }" \
+            --output json \
+            > migration-task.json
+
+          FAILURE_COUNT=$(jq '.failures | length' migration-task.json)
+
+          if [ "$FAILURE_COUNT" -ne 0 ]; then
+            echo "ECS failed to start the migration task:"
+            jq '.failures' migration-task.json
+            exit 1
+          fi
+
+          TASK_ARN=$(jq -r '.tasks[0].taskArn' migration-task.json)
+
+          if [ -z "$TASK_ARN" ] || [ "$TASK_ARN" = "null" ]; then
+            echo "Migration task ARN was not returned."
+            exit 1
+          fi
+
+          echo "task-arn=$TASK_ARN" >> "$GITHUB_OUTPUT"
+          echo "Migration task started: $TASK_ARN"
+
+      - name: Wait for migrations to finish
+        env:
+          TASK_ARN: ${{ steps.migrations.outputs.task-arn }}
+        run: |
+          echo "Waiting for migration task to stop..."
+
+          aws ecs wait tasks-stopped \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN"
+
+          TASK_RESULT=$(aws ecs describe-tasks \
+            --cluster "$ECS_CLUSTER" \
+            --tasks "$TASK_ARN" \
+            --output json)
+
+          EXIT_CODE=$(echo "$TASK_RESULT" | jq -r \
+            --arg CONTAINER "$ECS_CONTAINER_NAME" \
+            '.tasks[0].containers[]
+              | select(.name == $CONTAINER)
+              | .exitCode')
+
+          STOPPED_REASON=$(echo "$TASK_RESULT" | jq -r \
+            '.tasks[0].stoppedReason')
+
+          echo "Migration exit code: $EXIT_CODE"
+          echo "Stopped reason: $STOPPED_REASON"
+
+          if [ "$EXIT_CODE" != "0" ]; then
+            echo "Database migrations failed."
+            exit 1
+          fi
+
+          echo "Database migrations completed successfully."
